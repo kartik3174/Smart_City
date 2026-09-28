@@ -1,0 +1,6 @@
+{
+  "name": "SmartCity Forma — SIH26114 Sustainable Urban Site Planning & Analysis",
+  "description": "Smart City Site Planning and Analysis using Autodesk Forma and Revit BIM for Smart India Hackathon SIH26114. Features minimum 1 km² site design, Proposal A vs B comparison via Forma Board, 8 environmental analyses, Revit office tower BIM synchronization, 30-second walkthrough, and 7-slide competition pitch deck.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
