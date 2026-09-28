@@ -4,286 +4,279 @@
  */
 
 import React, { useState } from 'react';
+import { ProjectData, ProposalId } from '../types';
 import {
-  FORMA_ANALYSES_METRICS,
-  PROPOSAL_A_DATA,
-  PROPOSAL_B_DATA,
-  SITE_METADATA,
-} from '../data/smartCityData';
-import {
-  CheckCircle2,
-  TrendingDown,
-  TrendingUp,
-  Award,
   Download,
-  Info,
-  Layers,
+  CheckCircle2,
+  AlertCircle,
+  Clock,
+  ArrowRight,
+  Award,
   ChevronDown,
   ChevronUp,
 } from 'lucide-react';
 
 interface FormaBoardProps {
-  onSelectProposal: (p: 'proposalA' | 'proposalB') => void;
-  onNavigateToAnalysis: (analysisId: string) => void;
-  onNavigateToRevit: () => void;
+  projectData: ProjectData;
+  onSelectFinalProposal: (id: ProposalId, rationale: string) => void;
+  onNavigateToAnalysis: (id: string) => void;
+  onNavigateToEvidence: () => void;
+  isDemoMode: boolean;
 }
 
 export const FormaBoard: React.FC<FormaBoardProps> = ({
-  onSelectProposal,
+  projectData,
+  onSelectFinalProposal,
   onNavigateToAnalysis,
-  onNavigateToRevit,
+  onNavigateToEvidence,
+  isDemoMode,
 }) => {
-  const [expandedRow, setExpandedRow] = useState<string | null>(null);
-  const [downloadSuccess, setDownloadSuccess] = useState(false);
+  const [rationale, setRationale] = useState(
+    projectData.selectionRationale ||
+      'Proposal B is selected based on documented Forma simulation results: lower upfront embodied carbon intensity, increased biophilic open green spaces, improved pedestrian wind comfort, and thermal microclimate resilience.'
+  );
+  const [selectedProposal, setSelectedProposal] = useState<ProposalId>(
+    projectData.selectedFinalProposal || 'proposalB'
+  );
+  const [isSaved, setIsSaved] = useState(false);
 
-  const toggleRow = (id: string) => {
-    setExpandedRow((prev) => (prev === id ? null : id));
+  const propA = projectData.proposals.proposalA;
+  const propB = projectData.proposals.proposalB;
+
+  const handleSaveDecision = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSelectFinalProposal(selectedProposal, rationale);
+    setIsSaved(true);
+    setTimeout(() => setIsSaved(false), 2500);
   };
 
   const handleExportCSV = () => {
-    const headers = ['Category', 'Metric', 'Proposal A (Conventional)', 'Proposal B (Sustainable)', 'Delta (%)', 'Forma Benchmark'];
-    const rows = FORMA_ANALYSES_METRICS.map((m) => [
-      `"${m.category}"`,
-      `"${m.name}"`,
-      `"${m.displayA}"`,
-      `"${m.displayB}"`,
-      `"${m.deltaPercent > 0 ? '+' : ''}${m.deltaPercent}%"`,
-      `"${m.benchmarkStandard}"`,
+    const headers = [
+      'Category',
+      'Metric',
+      'Proposal A Value',
+      'Proposal B Value',
+      'Source',
+      'Source Type',
+      'Status',
+      'Neutral Comparison Observation',
+    ];
+
+    const rows = projectData.analyses.map((a) => [
+      `"${a.category}"`,
+      `"${a.metricName}"`,
+      `"${a.displayA}"`,
+      `"${a.displayB}"`,
+      `"${a.source}"`,
+      `"${a.sourceType}"`,
+      `"${a.status}"`,
+      `"${a.deltaSummary || 'Pending comparison'}"`,
     ]);
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
+
+    const csvContent =
+      'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', 'SIH26114_Forma_Board_Comparison_Report.csv');
+    link.setAttribute('download', `SIH26114_Forma_Board_Comparison_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
-
-    setDownloadSuccess(true);
-    setTimeout(() => setDownloadSuccess(false), 3000);
+    link.remove();
   };
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-      {/* Title & Board Metadata */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
         <div>
           <div className="flex items-center gap-2 text-xs text-slate-400 font-mono mb-1">
             <span>Autodesk Forma Board</span>
             <span aria-hidden="true">·</span>
-            <span>Comparative Design Intelligence</span>
-            <span aria-hidden="true">·</span>
-            <span className="text-cyan-400">Site Area: 1,000,000 m² (1.00 km²)</span>
+            <span>Evidence-Based Design Comparison</span>
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-white">
-            Proposal Performance Matrix
+            Proposal Performance Comparison
           </h1>
-          <p className="text-sm text-slate-400 max-w-3xl mt-1">
-            Direct analytical comparison between Conventional Gridiron (Proposal A) and Climate-Adaptive Biophilic (Proposal B) across all 8 mandatory Autodesk Forma environmental simulation engines.
+          <p className="text-sm text-slate-400 mt-1 max-w-3xl">
+            Neutral scientific benchmarking between Proposal A and Proposal B. Displays actual simulation values where verified evidence exists; displays 'Pending Forma Analysis' for incomplete modules. No fabricated scores.
           </p>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            onClick={handleExportCSV}
-            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-200 bg-slate-900 hover:bg-slate-800 border border-slate-700 rounded-lg transition-colors shadow-sm"
-          >
-            <Download className="w-3.5 h-3.5 text-cyan-400" />
-            <span>{downloadSuccess ? 'CSV Exported!' : 'Export Forma Board CSV'}</span>
-          </button>
-        </div>
+        <button
+          onClick={handleExportCSV}
+          className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-200 bg-slate-900 hover:bg-slate-800 border border-slate-700 rounded-lg transition-colors shadow-sm shrink-0"
+        >
+          <Download className="w-3.5 h-3.5 text-cyan-400" />
+          <span>Export Comparison CSV</span>
+        </button>
       </div>
 
-      {/* High-Level Comparison KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {/* Embodied Carbon */}
-        <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
-          <span className="text-xs text-slate-400 font-medium block">Embodied Carbon</span>
-          <div className="flex items-baseline gap-2 mt-1">
-            <span className="text-2xl font-bold font-mono text-emerald-400 tabular-nums">314</span>
-            <span className="text-xs text-slate-500 font-mono">kg CO₂e/m²</span>
-          </div>
-          <div className="flex items-center gap-1.5 mt-2 text-xs text-emerald-400 font-medium">
-            <TrendingDown className="w-3.5 h-3.5" />
-            <span>-36.2% vs Proposal A (492)</span>
-          </div>
-          <span className="text-[11px] text-slate-500 mt-1 block">238,320 tonnes CO₂e avoided</span>
+      {/* Demo Warning Banner */}
+      {isDemoMode && (
+        <div className="p-3 bg-amber-950/30 border border-amber-500/40 rounded-xl text-amber-300 text-xs flex items-center gap-3">
+          <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+          <span>
+            <strong>DEMO MODE — Values shown here are illustrative and are NOT official Autodesk Forma results.</strong> Switch to Actual Project mode to input your real Forma Board metrics.
+          </span>
         </div>
+      )}
 
-        {/* Green Area Ratio */}
-        <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
-          <span className="text-xs text-slate-400 font-medium block">Open Green Realm</span>
-          <div className="flex items-baseline gap-2 mt-1">
-            <span className="text-2xl font-bold font-mono text-cyan-400 tabular-nums">41.0%</span>
-            <span className="text-xs text-slate-500 font-mono">410,000 m²</span>
-          </div>
-          <div className="flex items-center gap-1.5 mt-2 text-xs text-cyan-400 font-medium">
-            <TrendingUp className="w-3.5 h-3.5" />
-            <span>2.28x higher than Prop A (18%)</span>
-          </div>
-          <span className="text-[11px] text-slate-500 mt-1 block">Continuous 225° SW breeze corridor</span>
-        </div>
-
-        {/* Microclimate Peak UTCI */}
-        <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
-          <span className="text-xs text-slate-400 font-medium block">Peak Microclimate UTCI</span>
-          <div className="flex items-baseline gap-2 mt-1">
-            <span className="text-2xl font-bold font-mono text-emerald-400 tabular-nums">29.6°C</span>
-            <span className="text-xs text-slate-500 font-mono">Thermal Comfort</span>
-          </div>
-          <div className="flex items-center gap-1.5 mt-2 text-xs text-emerald-400 font-medium">
-            <TrendingDown className="w-3.5 h-3.5" />
-            <span>-5.2°C cooler vs Prop A (34.8°C)</span>
-          </div>
-          <span className="text-[11px] text-slate-500 mt-1 block">Mitigates urban heat island</span>
-        </div>
-
-        {/* Solar Renewable Energy */}
-        <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
-          <span className="text-xs text-slate-400 font-medium block">Solar PV Generation</span>
-          <div className="flex items-baseline gap-2 mt-1">
-            <span className="text-2xl font-bold font-mono text-amber-400 tabular-nums">94,800</span>
-            <span className="text-xs text-slate-500 font-mono">MWh / year</span>
-          </div>
-          <div className="flex items-center gap-1.5 mt-2 text-xs text-amber-400 font-medium">
-            <TrendingUp className="w-3.5 h-3.5" />
-            <span>+123.0% vs Prop A (42.5k)</span>
-          </div>
-          <span className="text-[11px] text-slate-500 mt-1 block">Offsets 78% of daytime load</span>
-        </div>
-      </div>
-
-      {/* Main Forma Board Side-by-Side Comparison Table */}
+      {/* Spatial Masterplan Metrics Comparison Table */}
       <div className="bg-slate-900/90 border border-slate-800 rounded-xl overflow-hidden shadow-xl">
         <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
-          <h2 className="text-base font-semibold text-white">
-            Autodesk Forma Analysis Results Comparison
+          <h2 className="text-sm font-bold text-white uppercase tracking-wider font-mono">
+            Spatial & Land Use Utilization
           </h2>
-          <span className="text-xs text-slate-400 font-mono">
-            8 Mandatory Simulation Categories
-          </span>
+          <span className="text-xs text-slate-400 font-mono">Site Area: {projectData.site.siteAreaM2.toLocaleString()} m²</span>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
-            <thead>
-              <tr className="bg-slate-950/60 border-b border-slate-800 text-slate-400 font-mono">
-                <th className="py-3 px-4 w-1/4">Analysis Module</th>
-                <th className="py-3 px-4 w-1/4">
-                  <span className="block text-slate-300 font-semibold">Proposal A</span>
-                  <span className="text-[10px] text-slate-500">Conventional Development</span>
-                </th>
-                <th className="py-3 px-4 w-1/4">
-                  <span className="block text-cyan-300 font-semibold flex items-center gap-1">
-                    Proposal B
-                    <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
-                  </span>
-                  <span className="text-[10px] text-cyan-400/80">Sustainable Smart Development</span>
-                </th>
-                <th className="py-3 px-4 w-1/6 text-right">Forma Delta</th>
-                <th className="py-3 px-2 w-8"></th>
+          <table className="w-full text-xs font-mono">
+            <thead className="bg-slate-950/80 text-slate-400 text-[11px] border-b border-slate-800">
+              <tr>
+                <th className="py-3 px-4 text-left font-sans font-semibold">Masterplan Dimension</th>
+                <th className="py-3 px-4 text-left">Proposal A (Conventional)</th>
+                <th className="py-3 px-4 text-left text-cyan-300">Proposal B (Sustainable)</th>
+                <th className="py-3 px-4 text-left font-sans">Neutral Comparison Statement</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/80 font-sans">
-              {FORMA_ANALYSES_METRICS.map((metric) => {
-                const isExpanded = expandedRow === metric.id;
+            <tbody className="divide-y divide-slate-800/80 text-slate-300">
+              <tr className="hover:bg-slate-800/30">
+                <td className="py-2.5 px-4 font-sans font-semibold text-slate-200">Building Count</td>
+                <td className="py-2.5 px-4">{propA.buildings.length} building blocks</td>
+                <td className="py-2.5 px-4 text-cyan-300 font-bold">{propB.buildings.length} building blocks</td>
+                <td className="py-2.5 px-4 font-sans text-slate-400">
+                  {propB.buildings.length !== propA.buildings.length
+                    ? `Proposal B configures ${propB.buildings.length} building blocks compared to ${propA.buildings.length} in Proposal A.`
+                    : 'Both proposals share equal building block counts.'}
+                </td>
+              </tr>
+              <tr className="hover:bg-slate-800/30">
+                <td className="py-2.5 px-4 font-sans font-semibold text-slate-200">Gross Floor Area (GFA)</td>
+                <td className="py-2.5 px-4">{propA.declaredGfaM2.toLocaleString()} m²</td>
+                <td className="py-2.5 px-4 text-cyan-300 font-bold">{propB.declaredGfaM2.toLocaleString()} m²</td>
+                <td className="py-2.5 px-4 font-sans text-slate-400">
+                  {propB.declaredGfaM2 > propA.declaredGfaM2
+                    ? `Proposal B records a higher floor area yield (+${(propB.declaredGfaM2 - propA.declaredGfaM2).toLocaleString()} m²).`
+                    : 'GFA values are recorded above.'}
+                </td>
+              </tr>
+              <tr className="hover:bg-slate-800/30">
+                <td className="py-2.5 px-4 font-sans font-semibold text-slate-200">Building Footprint & Coverage</td>
+                <td className="py-2.5 px-4">
+                  {propA.declaredFootprintM2.toLocaleString()} m² ({propA.declaredSiteCoveragePercent}%)
+                </td>
+                <td className="py-2.5 px-4 text-cyan-300 font-bold">
+                  {propB.declaredFootprintM2.toLocaleString()} m² ({propB.declaredSiteCoveragePercent}%)
+                </td>
+                <td className="py-2.5 px-4 font-sans text-slate-400">
+                  {propB.declaredSiteCoveragePercent < propA.declaredSiteCoveragePercent
+                    ? `Proposal B records a lower ground site coverage (${propB.declaredSiteCoveragePercent}% vs ${propA.declaredSiteCoveragePercent}%).`
+                    : 'Footprint coverage values recorded.'}
+                </td>
+              </tr>
+              <tr className="hover:bg-slate-800/30">
+                <td className="py-2.5 px-4 font-sans font-semibold text-slate-200">Landscaped Green Area</td>
+                <td className="py-2.5 px-4">
+                  {propA.declaredGreenAreaM2.toLocaleString()} m² ({propA.declaredGreenPercent}%)
+                </td>
+                <td className="py-2.5 px-4 text-cyan-300 font-bold">
+                  {propB.declaredGreenAreaM2.toLocaleString()} m² ({propB.declaredGreenPercent}%)
+                </td>
+                <td className="py-2.5 px-4 font-sans text-slate-400">
+                  {propB.declaredGreenPercent > propA.declaredGreenPercent
+                    ? `Proposal B allocates ${propB.declaredGreenPercent}% green area compared to ${propA.declaredGreenPercent}% in Proposal A.`
+                    : 'Green area allocations recorded.'}
+                </td>
+              </tr>
+              <tr className="hover:bg-slate-800/30">
+                <td className="py-2.5 px-4 font-sans font-semibold text-slate-200">Transportation & Road Area</td>
+                <td className="py-2.5 px-4">
+                  {propA.declaredRoadAreaM2.toLocaleString()} m² ({propA.declaredRoadPercent}%)
+                </td>
+                <td className="py-2.5 px-4 text-cyan-300 font-bold">
+                  {propB.declaredRoadAreaM2.toLocaleString()} m² ({propB.declaredRoadPercent}%)
+                </td>
+                <td className="py-2.5 px-4 font-sans text-slate-400">
+                  {propB.declaredRoadPercent < propA.declaredRoadPercent
+                    ? `Proposal B records a lower impermeable vehicular road footprint (${propB.declaredRoadPercent}% vs ${propA.declaredRoadPercent}%).`
+                    : 'Road area allocations recorded.'}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* 8 Required Forma Environmental Analyses Comparison Table */}
+      <div className="bg-slate-900/90 border border-slate-800 rounded-xl overflow-hidden shadow-xl">
+        <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
+          <h2 className="text-sm font-bold text-white uppercase tracking-wider font-mono">
+            8 Mandatory Autodesk Forma Simulation Results
+          </h2>
+          <span className="text-xs text-cyan-400 font-mono">Official Problem Statement Results</span>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs font-mono">
+            <thead className="bg-slate-950/80 text-slate-400 text-[11px] border-b border-slate-800">
+              <tr>
+                <th className="py-3 px-4 text-left font-sans font-semibold">Forma Simulation Module</th>
+                <th className="py-3 px-4 text-left">Proposal A Value</th>
+                <th className="py-3 px-4 text-left text-cyan-300">Proposal B Value</th>
+                <th className="py-3 px-4 text-left">Evidence & Provenance</th>
+                <th className="py-3 px-4 text-left font-sans">Neutral Comparison Finding</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800/80 text-slate-300">
+              {projectData.analyses.map((a) => {
+                const hasEvidence = a.evidenceIds.length > 0;
                 return (
-                  <React.Fragment key={metric.id}>
-                    <tr
-                      onClick={() => toggleRow(metric.id)}
-                      className={`hover:bg-slate-800/40 transition-colors cursor-pointer ${
-                        isExpanded ? 'bg-slate-800/30' : ''
-                      }`}
-                    >
-                      <td className="py-3 px-4">
-                        <div className="font-semibold text-slate-200">{metric.name}</div>
-                        <div className="text-[11px] text-slate-400 font-mono">{metric.category}</div>
-                      </td>
-                      <td className="py-3 px-4 font-mono tabular-nums text-slate-300">
-                        {metric.displayA}
-                      </td>
-                      <td className="py-3 px-4 font-mono tabular-nums text-cyan-300 font-semibold">
-                        {metric.displayB}
-                      </td>
-                      <td className="py-3 px-4 text-right font-mono tabular-nums">
+                  <tr key={a.id} className="hover:bg-slate-800/30">
+                    <td className="py-3 px-4 font-sans font-semibold text-slate-200">
+                      <div>{a.metricName}</div>
+                      <div className="text-[10px] text-slate-500 font-mono">{a.category}</div>
+                    </td>
+                    <td className="py-3 px-4 text-slate-300">
+                      {a.displayA === 'Pending Forma Analysis' ? (
+                        <span className="text-slate-500 italic">Pending Forma Analysis</span>
+                      ) : (
+                        a.displayA
+                      )}
+                    </td>
+                    <td className="py-3 px-4 text-cyan-300 font-semibold">
+                      {a.displayB === 'Pending Forma Analysis' ? (
+                        <span className="text-slate-500 italic">Pending Forma Analysis</span>
+                      ) : (
+                        a.displayB
+                      )}
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="flex items-center gap-1.5">
                         <span
-                          className={`inline-flex items-center gap-1 font-semibold ${
-                            metric.isPositive ? 'text-emerald-400' : 'text-slate-400'
+                          className={`text-[9px] px-1.5 py-0.5 rounded border ${
+                            a.sourceType === 'DEMO'
+                              ? 'bg-amber-950/40 text-amber-400 border-amber-500/30'
+                              : hasEvidence
+                              ? 'bg-emerald-950/40 text-emerald-400 border-emerald-500/30'
+                              : 'bg-slate-900 text-slate-500 border-slate-800'
                           }`}
                         >
-                          {metric.deltaPercent > 0 ? '+' : ''}
-                          {metric.deltaPercent}%
-                          {metric.isPositive ? (
-                            <TrendingUp className="w-3.5 h-3.5" />
-                          ) : (
-                            <TrendingDown className="w-3.5 h-3.5" />
-                          )}
+                          {a.sourceType}
                         </span>
-                      </td>
-                      <td className="py-3 px-2 text-slate-500">
-                        {isExpanded ? (
-                          <ChevronUp className="w-4 h-4" />
+                        {hasEvidence ? (
+                          <span className="text-[10px] text-emerald-400 font-mono">Evidence linked</span>
                         ) : (
-                          <ChevronDown className="w-4 h-4" />
+                          <span className="text-[10px] text-slate-500 font-mono">No evidence</span>
                         )}
-                      </td>
-                    </tr>
-
-                    {/* Sub-breakdown rows on click */}
-                    {isExpanded && (
-                      <tr className="bg-slate-950/40">
-                        <td colSpan={5} className="p-4 border-y border-slate-800/80">
-                          <div className="space-y-3">
-                            <div className="text-xs text-slate-400">
-                              <span className="font-semibold text-slate-200">Forma Methodology: </span>
-                              {metric.formaMethodology}
-                            </div>
-                            <div className="text-[11px] text-slate-400 font-mono">
-                              <span className="text-slate-300">Benchmark Reference: </span>
-                              {metric.benchmarkStandard}
-                            </div>
-
-                            {metric.subBreakdown && (
-                              <div className="bg-slate-900 border border-slate-800 rounded-lg overflow-hidden mt-2">
-                                <table className="w-full text-xs">
-                                  <thead>
-                                    <tr className="bg-slate-950 text-slate-400 font-mono text-[11px]">
-                                      <th className="py-2 px-3 text-left">Sub-Component Parameter</th>
-                                      <th className="py-2 px-3 text-left">Proposal A</th>
-                                      <th className="py-2 px-3 text-left text-cyan-300">Proposal B</th>
-                                      <th className="py-2 px-3 text-right">Unit</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody className="divide-y divide-slate-800">
-                                    {metric.subBreakdown.map((sub, i) => (
-                                      <tr key={i} className="text-slate-300 font-mono text-[11px]">
-                                        <td className="py-1.5 px-3 font-sans text-slate-300">{sub.label}</td>
-                                        <td className="py-1.5 px-3">{sub.propA}</td>
-                                        <td className="py-1.5 px-3 text-cyan-300 font-medium">{sub.propB}</td>
-                                        <td className="py-1.5 px-3 text-right text-slate-500">{sub.unit}</td>
-                                      </tr>
-                                    ))}
-                                  </tbody>
-                                </table>
-                              </div>
-                            )}
-
-                            <div className="flex justify-end pt-1">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onNavigateToAnalysis(metric.id);
-                                }}
-                                className="text-xs text-cyan-400 hover:text-cyan-300 font-medium inline-flex items-center gap-1"
-                              >
-                                View Detailed {metric.name} Simulation &rarr;
-                              </button>
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </React.Fragment>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4 font-sans text-slate-400">
+                      {a.deltaSummary || (
+                        <span className="text-slate-500 italic">Awaiting simulation data upload</span>
+                      )}
+                    </td>
+                  </tr>
                 );
               })}
             </tbody>
@@ -291,57 +284,73 @@ export const FormaBoard: React.FC<FormaBoardProps> = ({
         </div>
       </div>
 
-      {/* Final Proposal Selection Rationale Section */}
-      <div className="bg-slate-900/90 border border-cyan-500/30 rounded-xl p-6 shadow-xl relative overflow-hidden">
-        <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
-          <div className="space-y-3 max-w-3xl">
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-xs text-cyan-400 font-mono uppercase tracking-wider font-semibold">
-                Section 8 — Final Proposal Selection
-              </span>
-            </div>
-            <h2 className="text-xl font-bold text-white">
-              Selected Winning Proposal: Proposal B — Sustainable Smart Urban Development
-            </h2>
-            <p className="text-sm text-slate-300 leading-relaxed">
-              Based on the comprehensive quantitative simulation results from all 8 Autodesk Forma analysis engines, <strong>Proposal B</strong> is selected for execution and detailed Revit BIM development. Proposal B delivers a superior 15-minute city layout, achieving higher commercial density (+5.4% GFA) while simultaneously saving <strong>238,320 tonnes of upfront embodied CO₂e</strong>, increasing open green space to <strong>41.0%</strong>, and reducing peak microclimate heat stress by <strong>5.2°C</strong>.
-            </p>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 text-xs">
-              <div className="bg-slate-950/60 border border-slate-800 p-3 rounded-lg">
-                <span className="font-semibold text-slate-200 block mb-1">Key Performance Superiority:</span>
-                <ul className="space-y-1 text-slate-400 list-disc list-inside">
-                  <li>36.2% lower embodied carbon through mass timber hybrid structure</li>
-                  <li>87% of public realm suitable for sitting & dining wind comfort</li>
-                  <li>91.6% increase in ground-level direct solar access (4.6 hrs/day)</li>
-                  <li>60.8% reduction in high acoustic traffic noise (&gt; 65 dBA)</li>
-                </ul>
-              </div>
-              <div className="bg-slate-950/60 border border-slate-800 p-3 rounded-lg">
-                <span className="font-semibold text-slate-200 block mb-1">Revit Development Selection:</span>
-                <p className="text-slate-400">
-                  <strong>Lumina Central EcoTower (Block C-04)</strong> selected for LOD 350 BIM modeling in Autodesk Revit, featuring parametric 32° solar louvers, CLT composite floorplates, and biophilic sky gardens.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-2 shrink-0 md:w-60">
-            <button
-              onClick={() => onSelectProposal('proposalB')}
-              className="w-full py-2.5 px-4 bg-cyan-400 hover:bg-cyan-300 text-slate-950 text-xs font-bold rounded-lg transition-colors shadow-md text-center"
-            >
-              Activate Proposal B in 3D
-            </button>
-            <button
-              onClick={onNavigateToRevit}
-              className="w-full py-2.5 px-4 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg transition-colors border border-slate-700 text-center"
-            >
-              Inspect Revit BIM Model &rarr;
-            </button>
-          </div>
+      {/* Section 8: Final Proposal Selection Rationale Documentation */}
+      <div className="bg-slate-900/90 border border-cyan-500/40 rounded-xl p-6 shadow-xl space-y-4">
+        <div>
+          <span className="text-xs text-cyan-400 font-mono uppercase tracking-wider font-semibold block mb-1">
+            Section 8 Problem Statement Requirement
+          </span>
+          <h2 className="text-lg font-bold text-white">
+            Final Proposal Selection & Justification Documentation
+          </h2>
+          <p className="text-xs text-slate-400 mt-0.5">
+            Document why the final proposal was selected, important design characteristics, Forma analysis results, and main differences from the alternative proposal based on actual project evidence.
+          </p>
         </div>
+
+        <form onSubmit={handleSaveDecision} className="space-y-4 text-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+            <span className="text-slate-300 font-medium">Selected Final Proposal:</span>
+            <div className="flex items-center gap-3 font-mono">
+              <label className="flex items-center gap-2 cursor-pointer text-slate-300">
+                <input
+                  type="radio"
+                  name="selectedProposal"
+                  checked={selectedProposal === 'proposalA'}
+                  onChange={() => setSelectedProposal('proposalA')}
+                  className="accent-cyan-500"
+                />
+                <span>Proposal A (Conventional Urban Development)</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer text-cyan-300 font-semibold">
+                <input
+                  type="radio"
+                  name="selectedProposal"
+                  checked={selectedProposal === 'proposalB'}
+                  onChange={() => setSelectedProposal('proposalB')}
+                  className="accent-cyan-500"
+                />
+                <span>Proposal B (Sustainable Smart Urban Development)</span>
+              </label>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-slate-400 mb-1 font-medium">
+              Selection Rationale & Evidence-Based Technical Justification *
+            </label>
+            <textarea
+              rows={4}
+              required
+              value={rationale}
+              onChange={(e) => setRationale(e.target.value)}
+              className="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 focus:outline-none focus:border-cyan-500 leading-relaxed font-sans"
+              placeholder="State the technical reasons for proposal selection based on actual Autodesk Forma analysis results..."
+            />
+          </div>
+
+          <div className="flex items-center justify-between pt-1">
+            <span className="text-xs text-slate-500 font-mono">
+              {isSaved ? 'Selection rationale updated in project.' : 'Selection ready for review.'}
+            </span>
+            <button
+              type="submit"
+              className="px-4 py-2 bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-bold rounded-lg transition-colors shadow-sm"
+            >
+              Save Selection Decision
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

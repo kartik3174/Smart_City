@@ -14,12 +14,11 @@ import {
   Sparkles,
   Award,
 } from 'lucide-react';
-import { MainTabType } from './Header';
-import { ProposalType } from '../types';
+import { NavigationPage, ProposalType } from '../types';
 
 interface GrandFinaleGuideProps {
   onClose: () => void;
-  onNavigateToTab: (tab: MainTabType) => void;
+  onNavigateToTab: (tab: NavigationPage) => void;
   onSelectProposal: (p: ProposalType) => void;
   onStartWalkthrough: () => void;
 }
@@ -40,14 +39,14 @@ export const GrandFinaleGuide: React.FC<GrandFinaleGuideProps> = ({
       case 1: // Introduce the site
       case 2: // Show site limits
       case 3: // Show contextual data
-        onNavigateToTab('viewport');
+        onNavigateToTab('site');
         break;
       case 4: // Show Proposal A
-        onNavigateToTab('viewport');
+        onNavigateToTab('proposalA');
         onSelectProposal('proposalA');
         break;
       case 5: // Show Proposal B
-        onNavigateToTab('viewport');
+        onNavigateToTab('proposalB');
         onSelectProposal('proposalB');
         break;
       case 6: // Run/show Forma analyses
@@ -60,13 +59,13 @@ export const GrandFinaleGuide: React.FC<GrandFinaleGuideProps> = ({
       case 9: // Show detailed office building
       case 10: // Show Revit development
       case 11: // Show sync back to Forma
-        onNavigateToTab('revit_bim');
+        onNavigateToTab('revit');
         break;
       case 12: // Show rendered images
-        onNavigateToTab('slides');
+        onNavigateToTab('presentation');
         break;
       case 13: // Play 30s walkthrough
-        onNavigateToTab('viewport');
+        onNavigateToTab('site');
         onStartWalkthrough();
         break;
     }

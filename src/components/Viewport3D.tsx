@@ -76,16 +76,18 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
   // Helper to color building based on active analysis or zoning
   const getBuildingMaterial = useCallback((b: BuildingData, isSelected: boolean, analysis: AnalysisMetricId | null) => {
     let colorHex = '#94a3b8';
+    const bHeight = b.height ?? b.heightM ?? 50;
+    const bCarbon = b.embodiedCarbon ?? b.embodiedCarbonKgM2 ?? 400;
 
     if (analysis === 'embodied_carbon') {
       // Carbon gradient: low green (< 320), medium amber (320-450), high red (> 450)
-      if (b.embodiedCarbon < 320) colorHex = '#10b981';
-      else if (b.embodiedCarbon < 450) colorHex = '#f59e0b';
+      if (bCarbon < 320) colorHex = '#10b981';
+      else if (bCarbon < 450) colorHex = '#f59e0b';
       else colorHex = '#ef4444';
     } else if (analysis === 'daylight_potential') {
       // Daylight potential: higher height / isolated = better daylight
-      if (b.isRevitSelected || b.height > 80) colorHex = '#06b6d4';
-      else if (b.height > 50) colorHex = '#3b82f6';
+      if (b.isRevitSelected || bHeight > 80) colorHex = '#06b6d4';
+      else if (bHeight > 50) colorHex = '#3b82f6';
       else colorHex = '#6366f1';
     } else if (analysis === 'solar_energy') {
       // High roof exposure
@@ -94,11 +96,11 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
       colorHex = '#f97316';
     } else if (analysis === 'wind_analysis') {
       // Wind stagnation / comfort zones
-      if (b.height > 90) colorHex = '#ef4444'; // Corner gusts
-      else if (b.height > 60) colorHex = '#f59e0b';
+      if (bHeight > 90) colorHex = '#ef4444'; // Corner gusts
+      else if (bHeight > 60) colorHex = '#f59e0b';
       else colorHex = '#10b981';
     } else if (analysis === 'microclimate') {
-      colorHex = b.embodiedCarbon < 350 ? '#059669' : '#d97706';
+      colorHex = bCarbon < 350 ? '#059669' : '#d97706';
     } else if (analysis === 'noise_analysis') {
       // Near northern expressway
       colorHex = b.y < 400 ? '#f43f5e' : '#10b981';
@@ -505,19 +507,23 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
 
     // 5. Buildings / Massing Envelopes
     if (showBuildings) {
-      currentProposalData.buildings.forEach((b) => {
+      currentProposalData.buildings.forEach((b: BuildingData) => {
         const isSelected = b.id === selectedBuildingId || b.isRevitSelected;
         const mat = getBuildingMaterial(b, !!isSelected, activeAnalysis);
+        const bW = b.width ?? b.widthM ?? 40;
+        const bH = b.height ?? b.heightM ?? 50;
+        const bD = b.depth ?? b.depthM ?? 40;
+        const bRot = b.rotation ?? b.rotationDeg ?? 0;
 
         // Building geometry
-        const bGeo = new THREE.BoxGeometry(b.width, b.height, b.depth);
+        const bGeo = new THREE.BoxGeometry(bW, bH, bD);
         const bMesh = new THREE.Mesh(bGeo, mat);
         bMesh.castShadow = true;
         bMesh.receiveShadow = true;
-        bMesh.position.set(b.x, b.height / 2, b.y);
+        bMesh.position.set(b.x, bH / 2, b.y);
 
-        if (b.rotation) {
-          bMesh.rotation.y = (b.rotation * Math.PI) / 180;
+        if (bRot) {
+          bMesh.rotation.y = (bRot * Math.PI) / 180;
         }
 
         // Store reference for raycasting / selection
@@ -528,7 +534,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
         // If this is the Revit Flagship Tower, add architectural details (sky gardens, crown, core)
         if (b.isRevitSelected && proposal === 'proposalB') {
           // Atrium crown
-          const crownGeo = new THREE.BoxGeometry(b.width * 0.9, 8, b.depth * 0.9);
+          const crownGeo = new THREE.BoxGeometry(bW * 0.9, 8, bD * 0.9);
           const crownMat = new THREE.MeshStandardMaterial({
             color: '#38bdf8',
             metalness: 0.8,
@@ -537,15 +543,15 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
             emissiveIntensity: 0.3,
           });
           const crown = new THREE.Mesh(crownGeo, crownMat);
-          crown.position.set(0, b.height / 2 + 4, 0);
+          crown.position.set(0, bH / 2 + 4, 0);
           bMesh.add(crown);
 
           // Cantilevered biophilic sky terraces (Levels 8, 16, 24)
           [0.3, 0.6, 0.85].forEach((hRatio) => {
-            const terraceGeo = new THREE.BoxGeometry(b.width + 6, 2, b.depth + 4);
+            const terraceGeo = new THREE.BoxGeometry(bW + 6, 2, bD + 4);
             const terraceMat = new THREE.MeshStandardMaterial({ color: '#10b981', roughness: 0.8 });
             const terrace = new THREE.Mesh(terraceGeo, terraceMat);
-            terrace.position.set(0, -b.height / 2 + b.height * hRatio, 0);
+            terrace.position.set(0, -bH / 2 + bH * hRatio, 0);
             bMesh.add(terrace);
           });
         }
@@ -965,7 +971,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
       {selectedBuildingId && (
         <div className="absolute left-4 bottom-24 z-20 w-80 bg-slate-900/95 backdrop-blur-md border border-cyan-500/40 rounded-xl p-4 shadow-2xl text-slate-200">
           {(() => {
-            const b = currentProposalData.buildings.find((item) => item.id === selectedBuildingId);
+            const b = currentProposalData.buildings.find((item: BuildingData) => item.id === selectedBuildingId);
             if (!b) return null;
             return (
               <div>
@@ -984,16 +990,16 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
                 <div className="grid grid-cols-2 gap-2 text-xs mb-3 font-mono">
                   <div className="bg-slate-800/60 p-2 rounded">
                     <span className="text-slate-400 block text-[10px]">Height / Floors</span>
-                    <span className="font-semibold text-slate-200">{b.height}m ({b.floors} storeys)</span>
+                    <span className="font-semibold text-slate-200">{(b.height ?? b.heightM ?? 0)}m ({b.floors} storeys)</span>
                   </div>
                   <div className="bg-slate-800/60 p-2 rounded">
                     <span className="text-slate-400 block text-[10px]">Gross Floor Area</span>
-                    <span className="font-semibold text-slate-200">{b.gfa.toLocaleString()} m²</span>
+                    <span className="font-semibold text-slate-200">{(b.gfa ?? b.gfaM2 ?? 0).toLocaleString()} m²</span>
                   </div>
                   <div className="bg-slate-800/60 p-2 rounded">
                     <span className="text-slate-400 block text-[10px]">Embodied Carbon</span>
-                    <span className={`font-semibold ${b.embodiedCarbon < 320 ? 'text-emerald-400' : 'text-amber-400'}`}>
-                      {b.embodiedCarbon} kg CO₂e/m²
+                    <span className={`font-semibold ${(b.embodiedCarbon ?? b.embodiedCarbonKgM2 ?? 400) < 320 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                      {b.embodiedCarbon ?? b.embodiedCarbonKgM2 ?? 400} kg CO₂e/m²
                     </span>
                   </div>
                   <div className="bg-slate-800/60 p-2 rounded">

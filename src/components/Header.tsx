@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { ProposalType } from '../types';
+import { AppMode, NavigationPage, ProposalId } from '../types';
 import { SyncStatusIndicator } from './SyncStatusIndicator';
 import {
   Layers,
@@ -15,85 +15,95 @@ import {
   FolderTree,
   Download,
   Share2,
+  FileCheck,
+  PackageCheck,
+  ShieldCheck,
+  AlertTriangle,
+  History,
+  FileCode,
+  MapPin,
+  Flame,
 } from 'lucide-react';
 
-export type MainTabType = 'viewport' | 'forma_board' | 'analyses' | 'revit_bim' | 'slides' | 'walkthrough';
-
 interface HeaderProps {
-  currentTab: MainTabType;
-  onTabChange: (tab: MainTabType) => void;
-  proposal: ProposalType;
-  onProposalChange: (p: ProposalType) => void;
-  onOpenChecklist: () => void;
-  onOpenFolderTree: () => void;
-  onOpenGrandFinale: () => void;
+  currentPage: NavigationPage;
+  onNavigate: (page: NavigationPage) => void;
+  appMode: AppMode;
+  onToggleAppMode: (mode: AppMode) => void;
+  blockersCount: number;
+  isReadyForSubmission: boolean;
+  onOpenChecklistModal: () => void;
+  onOpenFolderModal: () => void;
+  onOpenGrandFinaleModal?: () => void;
   isRevitSyncing?: boolean;
   lastRevitSyncTime?: Date;
 }
 
 export const Header: React.FC<HeaderProps> = ({
-  currentTab,
-  onTabChange,
-  proposal,
-  onProposalChange,
-  onOpenChecklist,
-  onOpenFolderTree,
-  onOpenGrandFinale,
+  currentPage,
+  onNavigate,
+  appMode,
+  onToggleAppMode,
+  blockersCount,
+  isReadyForSubmission,
+  onOpenChecklistModal,
+  onOpenFolderModal,
+  onOpenGrandFinaleModal,
   isRevitSyncing = false,
   lastRevitSyncTime = new Date(),
 }) => {
+  const isDemo = appMode === 'DEMO';
+
   return (
     <header className="border-b border-slate-800 bg-slate-950/95 sticky top-0 z-30 backdrop-blur-md">
-      {/* Universal Frontend Design Constitution: Strict 1-Row, 3-Zone Contract */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
+      {/* Primary Top Bar (Strict 1-Row, 3-Zone Contract) */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
         {/* Zone 1: Single text element wordmark in display face */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <a
             href="#"
             onClick={(e) => {
               e.preventDefault();
-              onTabChange('viewport');
+              onNavigate('dashboard');
             }}
             className="text-base sm:text-lg font-bold tracking-tight text-white hover:text-cyan-400 transition-colors whitespace-nowrap"
           >
             SmartCity Forma
           </a>
-          
+
           <div className="hidden lg:flex items-center text-xs text-slate-500 font-mono">
             <span>SIH26114</span>
             <span className="mx-2" aria-hidden="true">·</span>
-            <span>Autodesk Site Design</span>
-            <span className="mx-2" aria-hidden="true">·</span>
-            <span>1.00 km²</span>
+            <span>Companion & Evidence Dashboard</span>
           </div>
         </div>
 
-        {/* Zone 2: 4–6 clean single-line text navigation links */}
-        <nav className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm font-medium">
+        {/* Zone 2: Primary navigation links */}
+        <nav className="hidden md:flex items-center gap-1 sm:gap-1.5 text-xs font-medium overflow-x-auto py-1">
           <button
-            onClick={() => onTabChange('viewport')}
-            className={`px-3 py-1.5 rounded-md transition-colors whitespace-nowrap ${
-              currentTab === 'viewport'
+            onClick={() => onNavigate('dashboard')}
+            className={`px-2.5 py-1.5 rounded-md transition-colors whitespace-nowrap ${
+              currentPage === 'dashboard'
                 ? 'text-cyan-400 bg-slate-900 border border-slate-700/60 font-semibold'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            3D Site
+            Dashboard
           </button>
           <button
-            onClick={() => onTabChange('forma_board')}
-            className={`px-3 py-1.5 rounded-md transition-colors whitespace-nowrap ${
-              currentTab === 'forma_board'
+            onClick={() => onNavigate('site')}
+            className={`px-2.5 py-1.5 rounded-md transition-colors whitespace-nowrap ${
+              currentPage === 'site'
                 ? 'text-cyan-400 bg-slate-900 border border-slate-700/60 font-semibold'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            Forma Board
+            Site (≥1km²)
           </button>
           <button
-            onClick={() => onTabChange('analyses')}
-            className={`px-3 py-1.5 rounded-md transition-colors whitespace-nowrap ${
-              currentTab === 'analyses'
+            onClick={() => onNavigate('analyses')}
+            className={`px-2.5 py-1.5 rounded-md transition-colors whitespace-nowrap ${
+              currentPage === 'analyses'
                 ? 'text-cyan-400 bg-slate-900 border border-slate-700/60 font-semibold'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
@@ -101,9 +111,19 @@ export const Header: React.FC<HeaderProps> = ({
             8 Analyses
           </button>
           <button
-            onClick={() => onTabChange('revit_bim')}
-            className={`px-3 py-1.5 rounded-md transition-colors whitespace-nowrap ${
-              currentTab === 'revit_bim'
+            onClick={() => onNavigate('forma_board')}
+            className={`px-2.5 py-1.5 rounded-md transition-colors whitespace-nowrap ${
+              currentPage === 'forma_board'
+                ? 'text-cyan-400 bg-slate-900 border border-slate-700/60 font-semibold'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            Forma Board
+          </button>
+          <button
+            onClick={() => onNavigate('revit')}
+            className={`px-2.5 py-1.5 rounded-md transition-colors whitespace-nowrap ${
+              currentPage === 'revit'
                 ? 'text-cyan-400 bg-slate-900 border border-slate-700/60 font-semibold'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
@@ -111,9 +131,29 @@ export const Header: React.FC<HeaderProps> = ({
             Revit BIM
           </button>
           <button
-            onClick={() => onTabChange('slides')}
-            className={`px-3 py-1.5 rounded-md transition-colors whitespace-nowrap ${
-              currentTab === 'slides'
+            onClick={() => onNavigate('evidence')}
+            className={`px-2.5 py-1.5 rounded-md transition-colors whitespace-nowrap ${
+              currentPage === 'evidence'
+                ? 'text-cyan-400 bg-slate-900 border border-slate-700/60 font-semibold'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            Evidence Center
+          </button>
+          <button
+            onClick={() => onNavigate('deliverables')}
+            className={`px-2.5 py-1.5 rounded-md transition-colors whitespace-nowrap hidden lg:block ${
+              currentPage === 'deliverables'
+                ? 'text-cyan-400 bg-slate-900 border border-slate-700/60 font-semibold'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            Deliverables
+          </button>
+          <button
+            onClick={() => onNavigate('presentation')}
+            className={`px-2.5 py-1.5 rounded-md transition-colors whitespace-nowrap hidden lg:block ${
+              currentPage === 'presentation'
                 ? 'text-cyan-400 bg-slate-900 border border-slate-700/60 font-semibold'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
@@ -121,92 +161,147 @@ export const Header: React.FC<HeaderProps> = ({
             7 Slides
           </button>
           <button
-            onClick={() => onTabChange('walkthrough')}
-            className={`px-3 py-1.5 rounded-md transition-colors whitespace-nowrap hidden md:block ${
-              currentTab === 'walkthrough'
+            onClick={() => onNavigate('readiness')}
+            className={`px-2.5 py-1.5 rounded-md transition-colors whitespace-nowrap ${
+              currentPage === 'readiness'
                 ? 'text-cyan-400 bg-slate-900 border border-slate-700/60 font-semibold'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            Walkthrough
+            Readiness
           </button>
         </nav>
 
-        {/* Zone 3: Sync Status Indicator & primary actions */}
-        <div className="flex items-center gap-2">
-          {/* Top navigation bar Revit BIM Sync Status Indicator */}
+        {/* Zone 3: Mode Switcher, Sync Indicator, & Readiness Alert */}
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Revit BIM Real-Time Sync Status Indicator with Live Pulse */}
           <SyncStatusIndicator
             isRevitSyncing={isRevitSyncing}
             lastRevitSyncTime={lastRevitSyncTime}
           />
 
+          {/* Item 13: Honest Demo Toggle vs Actual Project */}
+          <div className="inline-flex p-0.5 bg-slate-900 border border-slate-800 rounded-lg text-xs font-mono">
+            <button
+              onClick={() => onToggleAppMode('ACTUAL')}
+              className={`px-2.5 py-1 rounded transition-all ${
+                !isDemo
+                  ? 'bg-cyan-500 text-slate-950 font-bold shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+              title="Actual team project mode"
+            >
+              ACTUAL PROJECT
+            </button>
+            <button
+              onClick={() => onToggleAppMode('DEMO')}
+              className={`px-2.5 py-1 rounded transition-all ${
+                isDemo
+                  ? 'bg-amber-500 text-slate-950 font-bold shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+              title="Illustrative demo data mode"
+            >
+              DEMO MODE
+            </button>
+          </div>
+
+          {/* Submission Readiness Status Pill */}
           <button
-            onClick={onOpenGrandFinale}
-            className="hidden xl:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-300 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-lg transition-colors whitespace-nowrap"
+            onClick={() => onNavigate('readiness')}
+            className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition-colors flex items-center gap-1.5 ${
+              isReadyForSubmission
+                ? 'bg-emerald-950/60 border-emerald-500/50 text-emerald-400'
+                : 'bg-red-950/40 border-red-500/40 text-red-300'
+            }`}
           >
-            Finale Flow (13 Steps)
-          </button>
-          <button
-            onClick={onOpenChecklist}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-950 bg-cyan-400 hover:bg-cyan-300 rounded-lg transition-colors whitespace-nowrap shadow-sm"
-          >
-            <CheckCircle2 className="w-3.5 h-3.5" />
-            <span>SIH Checklist</span>
+            {isReadyForSubmission ? (
+              <CheckCircle2 className="w-3.5 h-3.5" />
+            ) : (
+              <AlertTriangle className="w-3.5 h-3.5 text-red-400" />
+            )}
+            <span className="hidden sm:inline">
+              {isReadyForSubmission ? 'Verified' : `${blockersCount} Blockers`}
+            </span>
           </button>
         </div>
       </div>
 
-      {/* Sub-Header: Proposal Selector Bar (Proposal A vs Proposal B) & Project Tree Link */}
-      <div className="bg-slate-900/60 border-t border-slate-800/80 px-4 sm:px-6 py-2">
-        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
-          {/* Functional Segmented Proposal Switcher */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-400 font-medium">Site Proposal:</span>
-            <div className="inline-flex p-0.5 bg-slate-950 border border-slate-800 rounded-lg">
-              <button
-                onClick={() => onProposalChange('proposalA')}
-                className={`px-3 py-1 text-xs font-medium rounded-md transition-all whitespace-nowrap ${
-                  proposal === 'proposalA'
-                    ? 'bg-slate-800 text-slate-100 shadow-sm border border-slate-700'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                Proposal A: Conventional
-              </button>
-              <button
-                onClick={() => onProposalChange('proposalB')}
-                className={`px-3 py-1 text-xs font-medium rounded-md transition-all whitespace-nowrap flex items-center gap-1.5 ${
-                  proposal === 'proposalB'
-                    ? 'bg-cyan-500/20 text-cyan-300 shadow-sm border border-cyan-500/40 font-semibold'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
-                Proposal B: Sustainable (Selected)
-              </button>
-            </div>
+      {/* Sub-Bar: Secondary Navigation & Actions */}
+      <div className="bg-slate-900/60 border-t border-slate-800/80 px-4 sm:px-6 py-1.5">
+        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3 text-xs">
+          {/* Proposal Quick Links */}
+          <div className="flex items-center gap-2 font-mono">
+            <span className="text-slate-500">Proposals:</span>
+            <button
+              onClick={() => onNavigate('proposalA')}
+              className={`px-2 py-0.5 rounded text-[11px] ${
+                currentPage === 'proposalA' ? 'bg-slate-800 text-white font-bold' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Proposal A
+            </button>
+            <button
+              onClick={() => onNavigate('proposalB')}
+              className={`px-2 py-0.5 rounded text-[11px] ${
+                currentPage === 'proposalB' ? 'bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/40' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Proposal B (Selected)
+            </button>
+            <button
+              onClick={() => onNavigate('comparison')}
+              className={`px-2 py-0.5 rounded text-[11px] ${
+                currentPage === 'comparison' ? 'bg-slate-800 text-white font-bold' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Comparison
+            </button>
           </div>
 
-          {/* Quick stats, Revit Sync Indicator, and Folder tree link */}
-          <div className="flex items-center gap-4 text-xs text-slate-400">
-            {/* Real-time compact Revit BIM sync indicator */}
-            <SyncStatusIndicator
-              isSyncing={isRevitSyncing}
-              lastSyncTime={lastRevitSyncTime}
-              compact
-            />
-
-            <div className="hidden lg:flex items-center gap-3 font-mono">
-              <span>GFA: {proposal === 'proposalA' ? '1.48M m²' : '1.56M m²'}</span>
-              <span>·</span>
-              <span>Carbon: {proposal === 'proposalA' ? '492 kg/m²' : '314 kg/m²'}</span>
-              <span>·</span>
-              <span>Green: {proposal === 'proposalA' ? '18%' : '41%'}</span>
-            </div>
+          {/* Right Tools Links */}
+          <div className="flex items-center gap-3 font-mono text-[11px] text-slate-400">
+            <button
+              onClick={() => onNavigate('audit_log')}
+              className={`hover:text-cyan-400 transition-colors flex items-center gap-1 ${
+                currentPage === 'audit_log' ? 'text-cyan-400 font-bold' : ''
+              }`}
+            >
+              <History className="w-3.5 h-3.5" />
+              <span>Audit Log</span>
+            </button>
 
             <button
-              onClick={onOpenFolderTree}
-              className="inline-flex items-center gap-1 text-slate-400 hover:text-cyan-400 transition-colors"
+              onClick={() => onNavigate('import_export')}
+              className={`hover:text-cyan-400 transition-colors flex items-center gap-1 ${
+                currentPage === 'import_export' ? 'text-cyan-400 font-bold' : ''
+              }`}
+            >
+              <FileCode className="w-3.5 h-3.5" />
+              <span>Import / Export</span>
+            </button>
+
+            <button
+              onClick={onOpenChecklistModal}
+              className="hover:text-cyan-400 transition-colors flex items-center gap-1"
+            >
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="hidden sm:inline">24-Pt Checklist</span>
+            </button>
+
+            {onOpenGrandFinaleModal && (
+              <button
+                onClick={onOpenGrandFinaleModal}
+                className="hover:text-cyan-400 transition-colors flex items-center gap-1 text-cyan-300"
+              >
+                <Flame className="w-3.5 h-3.5 text-amber-400" />
+                <span className="hidden sm:inline">13-Step Flow</span>
+              </button>
+            )}
+
+            <button
+              onClick={onOpenFolderModal}
+              className="hover:text-cyan-400 transition-colors flex items-center gap-1"
             >
               <FolderTree className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Project Files</span>
