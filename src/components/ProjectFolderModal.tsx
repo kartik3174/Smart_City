@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { PROJECT_FOLDER_TREE } from '../data/smartCityData';
+import { PROJECT_FOLDER_TREE } from '../data/demo/demoCityData';
 import { ProjectFileItem } from '../types';
 import {
   Folder,

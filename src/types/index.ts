@@ -82,6 +82,8 @@ export interface AnalysisResult {
   description: string;
   formaEngine: string;
   methodologyStatus?: 'Planned Analysis Method' | 'Actual Forma Result' | 'Illustrative Demo';
+  proposalAStatus: VerificationStatus;
+  proposalBStatus: VerificationStatus;
   proposalAValue: number | string | null;
   proposalBValue: number | string | null;
   displayA: string;
@@ -227,10 +229,10 @@ export interface ProposalData {
 }
 
 /**
- * 6-Step Honest Revit Workflow Specification
+ * 7-Step Honest Revit Workflow Tracking Specification
  */
 export interface RevitWorkflowStep {
-  stepNumber: number;
+  stepNumber: number; // Steps 1 to 7
   title: string;
   softwareTool: string;
   description: string;
@@ -238,6 +240,8 @@ export interface RevitWorkflowStep {
   status: VerificationStatus;
   evidenceIds: string[];
   notes?: string;
+  date?: string;
+  reviewer?: string;
   lastUpdated?: string;
 }
 
@@ -245,7 +249,10 @@ export interface FormaBoardTracking {
   boardCreated: boolean;
   proposalAAdded: boolean;
   proposalBAdded: boolean;
-  comparisonVisible: boolean;
+  comparisonCompleted: boolean;
+  comparisonVisible?: boolean;
+  evidenceUploaded: boolean;
+  evidenceVerified: boolean;
   evidenceId?: string;
   status: VerificationStatus;
   notes?: string;

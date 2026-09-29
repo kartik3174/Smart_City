@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { WALKTHROUGH_WAYPOINTS } from '../data/smartCityData';
+import { WALKTHROUGH_WAYPOINTS } from '../data/demo/demoCityData';
 import {
   Play,
   Pause,

@@ -218,6 +218,8 @@ export const SiteView: React.FC<SiteViewProps> = ({
             onToggleWalkthrough={() => setIsWalkthroughPlaying(!isWalkthroughPlaying)}
             selectedBuildingId={selectedBuilding ? selectedBuilding.id : null}
             onSelectBuilding={setSelectedBuilding}
+            projectData={projectData}
+            isDemoMode={isDemoMode}
           />
         </div>
       </div>

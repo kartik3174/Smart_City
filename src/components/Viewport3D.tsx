@@ -5,13 +5,13 @@
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import * as THREE from 'three';
-import { BuildingData, ProposalType, AnalysisMetricId } from '../types';
+import { BuildingData, ProposalType, AnalysisMetricId, ProjectData } from '../types';
 import {
-  PROPOSAL_A_DATA,
-  PROPOSAL_B_DATA,
-  SITE_METADATA,
-  WALKTHROUGH_WAYPOINTS,
-} from '../data/smartCityData';
+  DEMO_PROPOSAL_A_DATA,
+  DEMO_PROPOSAL_B_DATA,
+  DEMO_SITE_METADATA,
+  DEMO_WALKTHROUGH_WAYPOINTS,
+} from '../data/demo/demoCityData';
 import {
   Maximize2,
   Compass,
@@ -33,6 +33,8 @@ interface Viewport3DProps {
   onToggleWalkthrough: () => void;
   selectedBuildingId: string | null;
   onSelectBuilding: (building: BuildingData | null) => void;
+  projectData?: ProjectData;
+  isDemoMode?: boolean;
 }
 
 export const Viewport3D: React.FC<Viewport3DProps> = ({
@@ -44,6 +46,8 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
   onToggleWalkthrough,
   selectedBuildingId,
   onSelectBuilding,
+  projectData,
+  isDemoMode = false,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
@@ -74,7 +78,20 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     target: new THREE.Vector3(500, 20, 500),
   });
 
-  const currentProposalData = proposal === 'proposalA' ? PROPOSAL_A_DATA : PROPOSAL_B_DATA;
+  const isDemo = isDemoMode;
+  const currentBuildings: BuildingData[] = isDemo
+    ? (proposal === 'proposalA' ? DEMO_PROPOSAL_A_DATA.buildings : DEMO_PROPOSAL_B_DATA.buildings)
+    : (projectData?.proposals[proposal]?.buildings || []);
+
+  const siteCoords = isDemo
+    ? DEMO_SITE_METADATA.coordinates
+    : (projectData?.site?.coordinates || '13°11\'42.8"N 77°42\'18.4"E');
+
+  const siteElev = isDemo
+    ? DEMO_SITE_METADATA.elevationMeters
+    : (projectData?.site?.elevationM || 915);
+
+  const waypoints = DEMO_WALKTHROUGH_WAYPOINTS;
 
   // Helper to color building based on active analysis or zoning
   const getBuildingMaterial = useCallback((b: BuildingData, isSelected: boolean, analysis: AnalysisMetricId | null) => {
@@ -510,7 +527,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
 
     // 5. Buildings / Massing Envelopes
     if (showBuildings) {
-      currentProposalData.buildings.forEach((b: BuildingData) => {
+      currentBuildings.forEach((b: BuildingData) => {
         const isSelected = b.id === selectedBuildingId || b.isRevitSelected;
         const mat = getBuildingMaterial(b, !!isSelected, activeAnalysis);
         const bW = b.width ?? b.widthM ?? 40;
@@ -869,11 +886,36 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
             <span className="font-semibold text-slate-100">Site Limits: 1,000,000 m² (1.00 km²)</span>
           </div>
           <div className="text-[11px] text-slate-400 font-mono flex items-center gap-2">
-            <span>{SITE_METADATA.coordinates}</span>
+            <span>{siteCoords}</span>
             <span>·</span>
-            <span>Elev: {SITE_METADATA.elevationMeters}m</span>
+            <span>Elev: {siteElev}m</span>
           </div>
+          {isDemo ? (
+            <div className="mt-1.5 px-2 py-0.5 rounded bg-amber-950/80 border border-amber-500/50 text-[10px] font-mono text-amber-300 font-bold">
+              DEMO DATA — NOT ACTUAL FORMA RESULTS
+            </div>
+          ) : currentBuildings.length > 0 ? (
+            <div className="mt-1.5 px-2 py-0.5 rounded bg-cyan-950/80 border border-cyan-500/50 text-[10px] font-mono text-cyan-300 font-bold">
+              ACTUAL PROJECT DATA ({currentBuildings.length} Buildings)
+            </div>
+          ) : (
+            <div className="mt-1.5 px-2 py-0.5 rounded bg-slate-950/80 border border-slate-700 text-[10px] font-mono text-slate-400">
+              ACTUAL PROJECT WORKSPACE (Cadastral Limits Only)
+            </div>
+          )}
         </div>
+
+        {/* Empty state notice if actual mode has no buildings */}
+        {!isDemo && currentBuildings.length === 0 && (
+          <div className="bg-slate-900/95 backdrop-blur-md border border-amber-500/40 rounded-lg p-3 text-xs text-amber-200 shadow-xl max-w-xs pointer-events-auto space-y-1">
+            <span className="font-bold text-amber-300 block font-mono text-[11px]">
+              NO ACTUAL PROJECT BUILDINGS AVAILABLE
+            </span>
+            <p className="text-[11px] text-slate-300 leading-snug">
+              Ground boundary polygon is rendered. Add building schedules in Proposal Detail or attach real Autodesk Forma/Revit evidence.
+            </p>
+          </div>
+        )}
 
         {/* Active Analysis Indicator */}
         {activeAnalysis && (

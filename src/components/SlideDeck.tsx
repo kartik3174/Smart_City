@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { OFFICIAL_SLIDES, SITE_METADATA } from '../data/smartCityData';
+import { OFFICIAL_SLIDES, SITE_METADATA } from '../data/demo/demoCityData';
 import {
   ChevronLeft,
   ChevronRight,

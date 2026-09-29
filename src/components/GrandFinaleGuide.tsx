@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { GRAND_FINALE_STEPS } from '../data/smartCityData';
+import { GRAND_FINALE_STEPS } from '../data/demo/demoCityData';
 import {
   CheckCircle2,
   ArrowRight,
@@ -102,9 +102,9 @@ export const GrandFinaleGuide: React.FC<GrandFinaleGuideProps> = ({
             <span className="text-xs font-mono font-bold text-cyan-400 uppercase tracking-wider">
               Step {currentStep.step} of 13
             </span>
-            <span className="text-xs text-emerald-400 font-mono flex items-center gap-1">
+            <span className="text-xs text-cyan-400 font-mono flex items-center gap-1">
               <CheckCircle2 className="w-3.5 h-3.5" />
-              <span>SIH Verified</span>
+              <span>SIH Requirement</span>
             </span>
           </div>
 

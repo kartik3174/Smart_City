@@ -586,7 +586,11 @@ export default function App() {
 
       {/* Modals */}
       {isChecklistModalOpen && (
-        <QualityChecklistModal onClose={() => setIsChecklistModalOpen(false)} />
+        <QualityChecklistModal
+          onClose={() => setIsChecklistModalOpen(false)}
+          projectData={projectData}
+          isDemoMode={appMode === 'DEMO'}
+        />
       )}
 
       {isFolderModalOpen && (
