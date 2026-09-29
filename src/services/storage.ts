@@ -3,13 +3,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { AppMode, AuditLogEntry, EvidenceItem, ProjectData } from '../types';
-import { DEMO_PROJECT_DATA } from '../data/demoData';
-import { INITIAL_ACTUAL_PROJECT_DATA } from '../data/initialActualProjectData';
+import { AppMode, AuditLogEntry, ProjectData } from '../types';
+import { DEMO_PROJECT_DATA } from '../data/demo/demoData';
+import { INITIAL_ACTUAL_PROJECT_DATA } from '../data/project/projectData';
 
-const ACTUAL_STORAGE_KEY = 'sih26114_actual_project_data_v2';
-const DEMO_STORAGE_KEY = 'sih26114_demo_project_data_v2';
-const MODE_STORAGE_KEY = 'sih26114_active_mode_v2';
+const ACTUAL_STORAGE_KEY = 'sih26114_actual_project_data_v3';
+const DEMO_STORAGE_KEY = 'sih26114_demo_project_data_v3';
+const MODE_STORAGE_KEY = 'sih26114_active_mode_v3';
 
 export function getStoredAppMode(): AppMode {
   try {
@@ -31,22 +31,30 @@ export function saveAppMode(mode: AppMode): void {
   }
 }
 
+/**
+ * Loads project data strictly without mixing demo and actual data.
+ * In Actual Project mode, if data is not stored or unevidenced, it strictly uses the clean template.
+ * Never uses demo data as fallback for missing actual project data!
+ */
 export function loadProjectData(mode: AppMode): ProjectData {
   const key = mode === 'DEMO' ? DEMO_STORAGE_KEY : ACTUAL_STORAGE_KEY;
-  const fallback = mode === 'DEMO' ? DEMO_PROJECT_DATA : INITIAL_ACTUAL_PROJECT_DATA;
+  const initialData = mode === 'DEMO' ? DEMO_PROJECT_DATA : INITIAL_ACTUAL_PROJECT_DATA;
 
   try {
     const raw = localStorage.getItem(key);
     if (raw) {
       const parsed = JSON.parse(raw) as ProjectData;
-      // Merge with required schema fields in case of version evolution
       return {
-        ...fallback,
+        ...initialData,
         ...parsed,
-        site: { ...fallback.site, ...parsed.site },
+        site: { ...initialData.site, ...parsed.site },
         proposals: {
-          proposalA: { ...fallback.proposals.proposalA, ...parsed.proposals?.proposalA },
-          proposalB: { ...fallback.proposals.proposalB, ...parsed.proposals?.proposalB },
+          proposalA: { ...initialData.proposals.proposalA, ...parsed.proposals?.proposalA },
+          proposalB: { ...initialData.proposals.proposalB, ...parsed.proposals?.proposalB },
+        },
+        formaBoardTracking: {
+          ...initialData.formaBoardTracking,
+          ...(parsed.formaBoardTracking || {}),
         },
       };
     }
@@ -54,7 +62,7 @@ export function loadProjectData(mode: AppMode): ProjectData {
     console.error('Error loading project data from storage:', e);
   }
 
-  return JSON.parse(JSON.stringify(fallback));
+  return JSON.parse(JSON.stringify(initialData));
 }
 
 export function saveProjectData(mode: AppMode, data: ProjectData): void {
@@ -99,12 +107,62 @@ export function exportProjectToJson(data: ProjectData): void {
   downloadAnchor.remove();
 }
 
-export function parseProjectJson(jsonStr: string): ProjectData {
-  const parsed = JSON.parse(jsonStr);
-  if (!parsed || !parsed.site || !parsed.proposals || !parsed.analyses) {
-    throw new Error('Invalid SIH26114 project data schema: missing mandatory fields (site, proposals, analyses).');
+/**
+ * Validates imported JSON data before accepting it (Requirement 35)
+ */
+export function validateAndParseProjectJson(jsonStr: string): {
+  success: boolean;
+  data?: ProjectData;
+  errors: string[];
+} {
+  const errors: string[] = [];
+
+  try {
+    const parsed = JSON.parse(jsonStr) as Partial<ProjectData>;
+    if (!parsed || typeof parsed !== 'object') {
+      return { success: false, errors: ['Invalid JSON format: root is not an object.'] };
+    }
+
+    if (!parsed.projectId) errors.push('Missing "projectId" field.');
+    if (!parsed.site) errors.push('Missing "site" metadata field.');
+    else {
+      if (typeof parsed.site.siteAreaM2 !== 'number') {
+        errors.push('Missing or invalid site.siteAreaM2 number.');
+      }
+    }
+
+    if (!parsed.proposals?.proposalA || !parsed.proposals?.proposalB) {
+      errors.push('Missing "proposals.proposalA" or "proposals.proposalB".');
+    }
+
+    if (!Array.isArray(parsed.analyses)) {
+      errors.push('Missing "analyses" array.');
+    }
+
+    if (!Array.isArray(parsed.revitWorkflow)) {
+      errors.push('Missing "revitWorkflow" array.');
+    }
+
+    if (!Array.isArray(parsed.deliverables)) {
+      errors.push('Missing "deliverables" array.');
+    }
+
+    if (errors.length > 0) {
+      return { success: false, errors };
+    }
+
+    return { success: true, data: parsed as ProjectData, errors: [] };
+  } catch (err: any) {
+    return { success: false, errors: [`JSON parse failure: ${err.message || String(err)}`] };
   }
-  return parsed as ProjectData;
+}
+
+export function parseProjectJson(jsonStr: string): ProjectData {
+  const result = validateAndParseProjectJson(jsonStr);
+  if (!result.success || !result.data) {
+    throw new Error(result.errors.join('; '));
+  }
+  return result.data;
 }
 
 export function resetActualProjectData(): ProjectData {

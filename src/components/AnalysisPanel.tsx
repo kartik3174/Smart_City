@@ -50,7 +50,7 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
   const [valB, setValB] = useState(currentMetric?.displayB || '');
   const [sourceText, setSourceText] = useState(currentMetric?.source || 'Autodesk Forma 2026.1');
   const [sourceType, setSourceType] = useState<SourceType>(currentMetric?.sourceType || 'TEAM_INPUT');
-  const [status, setStatus] = useState<VerificationStatus>(currentMetric?.status || 'NOT_STARTED');
+  const [status, setStatus] = useState<VerificationStatus>(currentMetric?.status || 'MISSING');
   const [notes, setNotes] = useState(currentMetric?.notes || '');
   const [deltaText, setDeltaText] = useState(currentMetric?.deltaSummary || '');
 
@@ -305,12 +305,13 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
                   <select
                     value={status}
                     onChange={(e) => setStatus(e.target.value as any)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 font-mono"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 font-mono text-xs"
                   >
-                    <option value="NOT_STARTED">NOT_STARTED (Pending Run)</option>
-                    <option value="IN_PROGRESS">IN_PROGRESS (Running)</option>
-                    <option value="EVIDENCE_UPLOADED">EVIDENCE_UPLOADED (Awaiting Review)</option>
-                    <option value="VERIFIED">VERIFIED (Evidence Attached & Confirmed)</option>
+                    <option value="MISSING">MISSING (Pending Run)</option>
+                    <option value="UPLOADED">UPLOADED (Artifact Uploaded)</option>
+                    <option value="PENDING_REVIEW">PENDING_REVIEW (Awaiting Audit Sign-off)</option>
+                    <option value="VERIFIED">VERIFIED (Evidence Confirmed)</option>
+                    <option value="REJECTED">REJECTED (Needs Re-run)</option>
                   </select>
                 </div>
               </div>

@@ -42,6 +42,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     (a) => a.status === 'VERIFIED' && a.evidenceIds.length > 0
   ).length;
 
+  const totalRevitSteps = projectData.revitWorkflow.length || 6;
   const verifiedRevitStepsCount = projectData.revitWorkflow.filter(
     (s) => s.status === 'VERIFIED' && s.evidenceIds.length > 0
   ).length;
@@ -66,6 +67,36 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </span>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Critical Site Area Constraint Violation Banner */}
+      {auditResult.hasSiteAreaViolation && (
+        <div className="p-4 sm:p-5 bg-red-950/50 border-2 border-red-500 rounded-2xl text-red-200 text-xs sm:text-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-2xl">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-6 h-6 text-red-400 shrink-0 mt-0.5 animate-pulse" />
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-bold text-white uppercase tracking-wider block font-mono">
+                  SITE AREA CONSTRAINT VIOLATION · PROJECT NOT READY
+                </span>
+                <span className="font-mono text-xs px-2 py-0.5 rounded bg-red-900 border border-red-500 text-red-100 font-bold">
+                  Deficit: {(1.0 - (projectData.site.siteAreaM2 / 1000000)).toFixed(3)} km²
+                </span>
+              </div>
+              <p className="text-slate-300 mt-1 leading-relaxed">
+                Current site area is {(projectData.site.siteAreaM2 / 1000000).toFixed(3)} km² ({projectData.site.siteAreaM2.toLocaleString()} m²), failing the mandatory SIH26114 minimum of 1.00 km² (1,000,000 m²).
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => onNavigate('site')}
+            className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-lg transition-colors whitespace-nowrap self-start sm:self-auto min-h-[44px] flex items-center gap-1.5"
+          >
+            <span>Resolve on Site View</span>
+            <ArrowRight className="w-4 h-4" />
+          </button>
         </div>
       )}
 
@@ -115,19 +146,40 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         {/* Site Area */}
         <div
           onClick={() => onNavigate('site')}
-          className="bg-slate-900/90 border border-slate-800 hover:border-slate-700 rounded-xl p-4 cursor-pointer transition-all shadow-md"
+          className={`border rounded-xl p-4 cursor-pointer transition-all shadow-md ${
+            siteAreaValidation.isValid
+              ? 'bg-slate-900/90 border-slate-800 hover:border-slate-700'
+              : 'bg-red-950/40 border-red-500/60 hover:border-red-400'
+          }`}
         >
           <div className="flex items-center justify-between text-xs text-slate-400 font-medium">
             <span>Site Area</span>
-            <MapPin className="w-4 h-4 text-cyan-400" />
+            <MapPin className={`w-4 h-4 ${siteAreaValidation.isValid ? 'text-cyan-400' : 'text-red-400'}`} />
           </div>
-          <div className="text-2xl font-bold font-mono text-white mt-1.5 tabular-nums">
-            {(projectData.site.siteAreaM2 / 1000000).toFixed(2)}{' '}
+          <div
+            className={`text-2xl font-bold font-mono mt-1.5 tabular-nums ${
+              siteAreaValidation.isValid ? 'text-white' : 'text-red-400'
+            }`}
+          >
+            {(projectData.site.siteAreaM2 / 1000000).toFixed(3)}{' '}
             <span className="text-sm font-normal text-slate-400 font-sans">km²</span>
           </div>
-          <div className="text-[11px] font-mono mt-1 text-emerald-400 flex items-center gap-1">
-            <CheckCircle2 className="w-3 h-3" />
-            <span>≥ 1.00 km² Verified</span>
+          <div
+            className={`text-[11px] font-mono mt-1 flex items-center gap-1 ${
+              siteAreaValidation.isValid ? 'text-emerald-400' : 'text-red-400 font-bold'
+            }`}
+          >
+            {siteAreaValidation.isValid ? (
+              <>
+                <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                <span>≥ 1.00 km² Satisfied</span>
+              </>
+            ) : (
+              <>
+                <AlertTriangle className="w-3 h-3 text-red-400" />
+                <span>&lt; 1.00 km² NOT READY</span>
+              </>
+            )}
           </div>
         </div>
 
@@ -164,13 +216,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
           <div className="text-2xl font-bold font-mono text-white mt-1.5 tabular-nums">
             {verifiedRevitStepsCount}{' '}
-            <span className="text-sm font-normal text-slate-400 font-sans">/ 4 Steps</span>
+            <span className="text-sm font-normal text-slate-400 font-sans">/ {totalRevitSteps} Steps</span>
           </div>
           <div className="text-[11px] font-mono mt-1 text-slate-400">
-            {verifiedRevitStepsCount === 4 ? (
-              <span className="text-emerald-400">Sync Verified</span>
+            {verifiedRevitStepsCount === totalRevitSteps ? (
+              <span className="text-emerald-400">All Steps Verified</span>
             ) : (
-              <span className="text-amber-400">In Progress</span>
+              <span className="text-amber-400">In Progress ({verifiedRevitStepsCount}/{totalRevitSteps})</span>
             )}
           </div>
         </div>

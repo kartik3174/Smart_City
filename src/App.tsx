@@ -39,6 +39,7 @@ import { PresentationPlanner } from './components/PresentationPlanner';
 import { SubmissionReadiness } from './components/SubmissionReadiness';
 import { AuditLogView } from './components/AuditLogView';
 import { DataImportExport } from './components/DataImportExport';
+import { MobileBottomNav } from './components/MobileBottomNav';
 
 // Modals
 import { QualityChecklistModal } from './components/QualityChecklistModal';
@@ -98,26 +99,25 @@ export default function App() {
     saveProjectData(newMode, withLog);
   };
 
-  // Revit Real-Time Sync Handshake Trigger
+  // Revit Workflow Evidence Record (No fake setTimeout or simulated handshake)
   const handleTriggerRevitSync = () => {
-    if (isRevitSyncing) return;
-    setIsRevitSyncing(true);
-    setTimeout(() => {
-      const now = new Date();
-      setIsRevitSyncing(false);
-      setLastRevitSyncTime(now);
+    const now = new Date();
+    setLastRevitSyncTime(now);
 
-      updateProjectDataAndSave((prev) =>
-        addAuditLog(prev, {
-          action: 'DATA_MODIFIED',
-          entity: 'Autodesk Revit Connector',
-          previousValue: 'Previous Sync',
-          newValue: now.toLocaleTimeString(),
-          user: 'Revit Live Add-in',
-          notes: 'Handshake completed: Lumina EcoTower geometry & carbon parameters synced.',
-        })
-      );
-    }, 2200);
+    const verifiedCount = (projectData.revitWorkflow || []).filter(
+      (s) => s.status === 'VERIFIED' && s.evidenceIds && s.evidenceIds.length > 0
+    ).length;
+
+    updateProjectDataAndSave((prev) =>
+      addAuditLog(prev, {
+        action: 'DATA_MODIFIED',
+        entity: 'Revit Workflow Evidence Audit',
+        previousValue: 'Previous Check',
+        newValue: now.toLocaleTimeString(),
+        user: 'Team BIM Auditor',
+        notes: `Workflow step recorded — attach actual Revit/Forma evidence. Currently ${verifiedCount} of ${prev.revitWorkflow.length} steps verified.`,
+      })
+    );
   };
 
   // Update proposal
@@ -248,13 +248,13 @@ export default function App() {
     updateProjectDataAndSave((prev) => {
       const nextList = [item, ...(prev.evidenceList || [])];
 
-      // Automatically link to requirement
+      // Link to requirement without automatically marking as VERIFIED
       const nextRequirements = prev.requirements.map((req) => {
         if (req.id === item.requirementId) {
           const links = req.linkedEvidenceIds || [];
           return {
             ...req,
-            status: 'VERIFIED' as VerificationStatus,
+            status: (req.status === 'VERIFIED' ? 'VERIFIED' : 'PENDING_REVIEW') as VerificationStatus,
             linkedEvidenceIds: links.includes(item.id) ? links : [...links, item.id],
           };
         }
@@ -278,14 +278,74 @@ export default function App() {
     });
   };
 
+  // Update evidence item (review / verify / reject)
+  const handleUpdateEvidence = (id: string, updated: Partial<EvidenceItem>) => {
+    updateProjectDataAndSave((prev) => {
+      const nextList = (prev.evidenceList || []).map((e) => (e.id === id ? { ...e, ...updated } : e));
+      const targetItem = nextList.find((e) => e.id === id);
+
+      let nextRequirements = prev.requirements;
+      if (targetItem && updated.status) {
+        nextRequirements = prev.requirements.map((req) => {
+          if (req.id === targetItem.requirementId) {
+            const linkedItems = nextList.filter((e) => (req.linkedEvidenceIds || []).includes(e.id));
+            const hasVerified = linkedItems.some((e) => e.status === 'VERIFIED');
+            const hasPending = linkedItems.some((e) => e.status === 'PENDING_REVIEW' || e.status === 'UPLOADED');
+            const newReqStatus: VerificationStatus = hasVerified
+              ? 'VERIFIED'
+              : hasPending
+              ? 'PENDING_REVIEW'
+              : linkedItems.length > 0
+              ? 'REJECTED'
+              : 'MISSING';
+            return {
+              ...req,
+              status: newReqStatus,
+            };
+          }
+          return req;
+        });
+      }
+
+      return addAuditLog(
+        {
+          ...prev,
+          evidenceList: nextList,
+          requirements: nextRequirements,
+        },
+        {
+          action: updated.status === 'VERIFIED' ? 'EVIDENCE_VERIFIED' : updated.status === 'REJECTED' ? 'EVIDENCE_REJECTED' : 'DATA_MODIFIED',
+          entity: `Evidence Item: ${id}`,
+          newValue: updated.status || 'Updated',
+          user: updated.reviewer || 'Quality Auditor',
+          notes: updated.verificationNote || updated.notes || 'Evidence item updated.',
+        }
+      );
+    });
+  };
+
   // Delete evidence item
   const handleDeleteEvidence = (id: string) => {
     updateProjectDataAndSave((prev) => {
       const nextList = prev.evidenceList.filter((e) => e.id !== id);
-      const nextRequirements = prev.requirements.map((req) => ({
-        ...req,
-        linkedEvidenceIds: (req.linkedEvidenceIds || []).filter((eId) => eId !== id),
-      }));
+      const nextRequirements = prev.requirements.map((req) => {
+        const remainingLinks = (req.linkedEvidenceIds || []).filter((eId) => eId !== id);
+        const linkedItems = nextList.filter((e) => remainingLinks.includes(e.id));
+        const hasVerified = linkedItems.some((e) => e.status === 'VERIFIED');
+        const hasPending = linkedItems.some((e) => e.status === 'PENDING_REVIEW' || e.status === 'UPLOADED');
+        const newReqStatus: VerificationStatus = remainingLinks.length === 0
+          ? 'MISSING'
+          : hasVerified
+          ? 'VERIFIED'
+          : hasPending
+          ? 'PENDING_REVIEW'
+          : 'REJECTED';
+        return {
+          ...req,
+          status: newReqStatus,
+          linkedEvidenceIds: remainingLinks,
+        };
+      });
 
       return addAuditLog(
         {
@@ -346,12 +406,13 @@ export default function App() {
         onOpenChecklistModal={() => setIsChecklistModalOpen(true)}
         onOpenFolderModal={() => setIsFolderModalOpen(true)}
         onOpenGrandFinaleModal={() => setIsGrandFinaleModalOpen(true)}
+        projectData={projectData}
         isRevitSyncing={isRevitSyncing}
         lastRevitSyncTime={lastRevitSyncTime}
       />
 
       {/* Main Content Viewport */}
-      <main className="flex-1 flex flex-col relative overflow-y-auto">
+      <main className="flex-1 flex flex-col relative overflow-y-auto pb-20 lg:pb-0">
         {currentPage === 'dashboard' && (
           <DashboardView
             projectData={projectData}
@@ -444,6 +505,7 @@ export default function App() {
           <EvidenceCenter
             projectData={projectData}
             onAddEvidence={handleAddEvidence}
+            onUpdateEvidence={handleUpdateEvidence}
             onDeleteEvidence={handleDeleteEvidence}
             isDemoMode={isDemo}
           />
@@ -472,6 +534,7 @@ export default function App() {
             onNavigateToEvidence={() => setCurrentPage('evidence')}
             onNavigateToAnalyses={() => setCurrentPage('analyses')}
             onNavigateToRevit={() => setCurrentPage('revit')}
+            onNavigateToSite={() => setCurrentPage('site')}
             isDemoMode={isDemo}
           />
         )}
@@ -490,8 +553,19 @@ export default function App() {
         )}
       </main>
 
+      {/* Mobile Bottom Navigation Bar (Smartphones & small tablets) */}
+      <MobileBottomNav
+        currentPage={currentPage}
+        onNavigate={setCurrentPage}
+        blockersCount={blockersCount}
+        isReadyForSubmission={isReadyForSubmission}
+        onOpenChecklistModal={() => setIsChecklistModalOpen(true)}
+        onOpenFolderModal={() => setIsFolderModalOpen(true)}
+        onOpenGrandFinaleModal={() => setIsGrandFinaleModalOpen(true)}
+      />
+
       {/* Compliance & Provenance Footer */}
-      <footer className="border-t border-slate-900 bg-slate-950/90 px-4 py-2 text-[11px] text-slate-500 font-mono flex flex-wrap items-center justify-between gap-3">
+      <footer className="border-t border-slate-900 bg-slate-950/90 px-4 py-2 text-[11px] text-slate-500 font-mono flex flex-wrap items-center justify-between gap-3 mb-14 lg:mb-0">
         <div className="flex items-center gap-2">
           <span className="text-cyan-400 font-bold">{projectData.site.problemStatementId}</span>
           <span aria-hidden="true">·</span>

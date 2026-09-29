@@ -31,7 +31,7 @@ export const DeliverablesManager: React.FC<DeliverablesManagerProps> = ({
   isDemoMode,
 }) => {
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [status, setStatus] = useState<VerificationStatus>('NOT_STARTED');
+  const [status, setStatus] = useState<VerificationStatus>('MISSING');
   const [owner, setOwner] = useState('');
   const [notes, setNotes] = useState('');
 
@@ -127,10 +127,11 @@ export const DeliverablesManager: React.FC<DeliverablesManagerProps> = ({
                       onChange={(e) => setStatus(e.target.value as any)}
                       className="w-full bg-slate-950 border border-slate-800 rounded p-1.5 text-slate-200 font-mono"
                     >
-                      <option value="NOT_STARTED">NOT_STARTED</option>
-                      <option value="IN_PROGRESS">IN_PROGRESS</option>
-                      <option value="EVIDENCE_UPLOADED">EVIDENCE_UPLOADED</option>
+                      <option value="MISSING">MISSING</option>
+                      <option value="UPLOADED">UPLOADED</option>
+                      <option value="PENDING_REVIEW">PENDING_REVIEW</option>
                       <option value="VERIFIED">VERIFIED</option>
+                      <option value="REJECTED">REJECTED</option>
                     </select>
                   </div>
                   <div>

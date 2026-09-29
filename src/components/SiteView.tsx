@@ -77,31 +77,51 @@ export const SiteView: React.FC<SiteViewProps> = ({
 
       {/* Mandatory Site Area Constraint Verification Card */}
       <div
-        className={`p-4 rounded-xl border flex items-start justify-between gap-4 ${
+        className={`p-4 sm:p-5 rounded-xl sm:rounded-2xl border transition-all ${
           siteAreaValidation.isValid
             ? 'bg-slate-900/90 border-slate-800'
-            : 'bg-red-950/40 border-red-500/50'
+            : 'bg-red-950/60 border-2 border-red-500 shadow-2xl'
         }`}
       >
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            {siteAreaValidation.isValid ? (
-              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-            ) : (
-              <AlertTriangle className="w-4 h-4 text-red-400" />
-            )}
-            <span className="text-xs font-bold text-white uppercase font-mono tracking-wider">
-              SIH26114 Minimum 1 km² Constraint Audit
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1.5 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              {siteAreaValidation.isValid ? (
+                <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+              ) : (
+                <AlertTriangle className="w-5 h-5 text-red-400 shrink-0 animate-pulse" />
+              )}
+              <span className="text-xs sm:text-sm font-bold text-white uppercase font-mono tracking-wider">
+                SIH26114 Mandatory Minimum 1 km² (1,000,000 m²) Site Area Constraint
+              </span>
+              <span
+                className={`font-mono text-[10px] font-bold px-2 py-0.5 rounded border ${
+                  siteAreaValidation.isValid
+                    ? 'bg-emerald-950 text-emerald-300 border-emerald-500/50'
+                    : 'bg-red-900 text-red-200 border-red-500 font-black'
+                }`}
+              >
+                {siteAreaValidation.isValid ? 'CRITERION SATISFIED' : 'STATUS: NOT READY'}
+              </span>
+            </div>
+            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed font-sans">
+              {siteAreaValidation.message}
+            </p>
+          </div>
+
+          <div className="text-left sm:text-right font-mono text-xs shrink-0 p-3 sm:p-0 bg-slate-950/60 sm:bg-transparent rounded-lg border sm:border-0 border-slate-800">
+            <span className="text-slate-400 block text-[10px] uppercase">Declared / Measured Area</span>
+            <span
+              className={`text-lg sm:text-2xl font-bold font-mono tabular-nums ${
+                siteAreaValidation.isValid ? 'text-cyan-300' : 'text-red-400'
+              }`}
+            >
+              {(site.siteAreaM2 / 1000000).toFixed(3)} km²
+            </span>
+            <span className="text-[10px] text-slate-500 block font-mono">
+              {site.siteAreaM2.toLocaleString()} m² (Min: 1,000,000 m²)
             </span>
           </div>
-          <p className="text-xs text-slate-300">{siteAreaValidation.message}</p>
-        </div>
-
-        <div className="text-right font-mono text-xs shrink-0">
-          <span className="text-slate-400 block text-[10px]">Verified Area</span>
-          <span className="text-base font-bold text-cyan-300">
-            {(site.siteAreaM2 / 1000000).toFixed(2)} km²
-          </span>
         </div>
       </div>
 
@@ -188,7 +208,7 @@ export const SiteView: React.FC<SiteViewProps> = ({
         </div>
 
         {/* 3D Viewport Canvas Container */}
-        <div className="w-full h-[520px] rounded-2xl overflow-hidden border border-slate-800 shadow-2xl relative bg-slate-950">
+        <div className="w-full h-[340px] sm:h-[440px] lg:h-[520px] rounded-xl sm:rounded-2xl overflow-hidden border border-slate-800 shadow-2xl relative bg-slate-950">
           <Viewport3D
             proposal={activeProposalId}
             activeAnalysis={null}

@@ -59,11 +59,14 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
   const [showLandscape, setShowLandscape] = useState(true);
   const [showBuildings, setShowBuildings] = useState(true);
   const [showHeatmapGround, setShowHeatmapGround] = useState(true);
+  const [showLayersDropdown, setShowLayersDropdown] = useState(false);
   const [cameraPreset, setCameraPreset] = useState<'iso' | 'top' | 'pedestrian' | 'revit'>('iso');
 
-  // Mouse drag orbit controls state
+  // Mouse & Touch interaction state
   const isDraggingRef = useRef(false);
   const prevMousePosRef = useRef({ x: 0, y: 0 });
+  const touchStartPosRef = useRef<{ x: number; y: number } | null>(null);
+  const touchDistanceRef = useRef<number | null>(null);
   const cameraSphericalRef = useRef({
     radius: 1200,
     theta: Math.PI / 4,
@@ -748,6 +751,74 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     updateCameraFromSpherical();
   };
 
+  // Touch Interaction Handlers for Mobile Phones and Tablets
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      isDraggingRef.current = true;
+      const touch = e.touches[0];
+      prevMousePosRef.current = { x: touch.clientX, y: touch.clientY };
+      touchStartPosRef.current = { x: touch.clientX, y: touch.clientY };
+      touchDistanceRef.current = null;
+    } else if (e.touches.length === 2) {
+      isDraggingRef.current = false;
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      touchDistanceRef.current = Math.hypot(dx, dy);
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (e.touches.length === 1 && isDraggingRef.current) {
+      const touch = e.touches[0];
+      const dx = touch.clientX - prevMousePosRef.current.x;
+      const dy = touch.clientY - prevMousePosRef.current.y;
+      prevMousePosRef.current = { x: touch.clientX, y: touch.clientY };
+
+      cameraSphericalRef.current.theta -= dx * 0.007;
+      cameraSphericalRef.current.phi = Math.max(0.1, Math.min(Math.PI / 2.05, cameraSphericalRef.current.phi - dy * 0.007));
+      updateCameraFromSpherical();
+    } else if (e.touches.length === 2 && touchDistanceRef.current !== null) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const newDist = Math.hypot(dx, dy);
+      if (newDist > 0 && touchDistanceRef.current > 0) {
+        const ratio = touchDistanceRef.current / newDist;
+        cameraSphericalRef.current.radius = Math.max(150, Math.min(2200, cameraSphericalRef.current.radius * (1 + (ratio - 1) * 0.4)));
+        touchDistanceRef.current = newDist;
+        updateCameraFromSpherical();
+      }
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (e.touches.length === 0) {
+      if (touchStartPosRef.current && isDraggingRef.current) {
+        const dx = Math.abs(prevMousePosRef.current.x - touchStartPosRef.current.x);
+        const dy = Math.abs(prevMousePosRef.current.y - touchStartPosRef.current.y);
+        if (dx < 10 && dy < 10 && containerRef.current && cameraRef.current) {
+          const rect = containerRef.current.getBoundingClientRect();
+          const mouse = new THREE.Vector2(
+            ((touchStartPosRef.current.x - rect.left) / rect.width) * 2 - 1,
+            -((touchStartPosRef.current.y - rect.top) / rect.height) * 2 + 1
+          );
+          const raycaster = new THREE.Raycaster();
+          raycaster.setFromCamera(mouse, cameraRef.current);
+          const meshes = Array.from(buildingMeshesRef.current.values());
+          const intersects = raycaster.intersectObjects(meshes);
+          if (intersects.length > 0) {
+            const bData = intersects[0].object.userData.building as BuildingData;
+            if (bData) onSelectBuilding(bData);
+          } else {
+            onSelectBuilding(null);
+          }
+        }
+      }
+      isDraggingRef.current = false;
+      touchDistanceRef.current = null;
+      touchStartPosRef.current = null;
+    }
+  };
+
   // Click on building to inspect
   const handleClick = (e: React.MouseEvent) => {
     if (!containerRef.current || !cameraRef.current || !sceneRef.current) return;
@@ -774,7 +845,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
   };
 
   return (
-    <div className="relative w-full h-full select-none overflow-hidden bg-slate-950">
+    <div className="relative w-full h-full select-none overflow-hidden bg-slate-950 touch-none">
       {/* 3D WebGL Canvas */}
       <div
         ref={containerRef}
@@ -783,6 +854,9 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onWheel={handleWheel}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
         onClick={handleClick}
         onContextMenu={(e) => e.preventDefault()}
       />
@@ -852,54 +926,68 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
           </button>
         </div>
 
-        {/* Layer Toggles Popover */}
-        <div className="bg-slate-900/90 backdrop-blur-md border border-slate-700/60 rounded-lg p-2 text-xs flex flex-col gap-1.5 shadow-xl text-slate-300 min-w-[160px]">
-          <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider mb-0.5">BIM Layers</span>
-          <label className="flex items-center justify-between cursor-pointer hover:text-slate-100">
-            <span>Site Boundary</span>
-            <input
-              type="checkbox"
-              checked={showBoundary}
-              onChange={(e) => setShowBoundary(e.target.checked)}
-              className="accent-cyan-500 rounded"
-            />
-          </label>
-          <label className="flex items-center justify-between cursor-pointer hover:text-slate-100">
-            <span>Transportation</span>
-            <input
-              type="checkbox"
-              checked={showRoads}
-              onChange={(e) => setShowRoads(e.target.checked)}
-              className="accent-cyan-500 rounded"
-            />
-          </label>
-          <label className="flex items-center justify-between cursor-pointer hover:text-slate-100">
-            <span>Landscaping</span>
-            <input
-              type="checkbox"
-              checked={showLandscape}
-              onChange={(e) => setShowLandscape(e.target.checked)}
-              className="accent-cyan-500 rounded"
-            />
-          </label>
-          <label className="flex items-center justify-between cursor-pointer hover:text-slate-100">
-            <span>Buildings</span>
-            <input
-              type="checkbox"
-              checked={showBuildings}
-              onChange={(e) => setShowBuildings(e.target.checked)}
-              className="accent-cyan-500 rounded"
-            />
-          </label>
-          <label className="flex items-center justify-between cursor-pointer hover:text-slate-100">
-            <span>Terrain Heatmap</span>
-            <input
-              type="checkbox"
-              checked={showHeatmapGround}
-              onChange={(e) => setShowHeatmapGround(e.target.checked)}
-              className="accent-cyan-500 rounded"
-            />
-          </label>
+        {/* Layer Toggles Button & Popover */}
+        <div className="relative">
+          <button
+            onClick={() => setShowLayersDropdown(!showLayersDropdown)}
+            className="sm:hidden px-2.5 py-1 text-xs rounded bg-slate-900/90 border border-slate-700/60 text-slate-300 hover:text-white flex items-center gap-1.5 shadow-xl"
+          >
+            <Layers className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Layers</span>
+          </button>
+
+          <div
+            className={`${
+              showLayersDropdown ? 'flex' : 'hidden sm:flex'
+            } absolute sm:static right-0 top-full mt-1 sm:mt-0 bg-slate-900/95 backdrop-blur-md border border-slate-700/60 rounded-lg p-2 text-xs flex-col gap-1.5 shadow-2xl text-slate-300 min-w-[160px] z-20`}
+          >
+            <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider mb-0.5">BIM Layers</span>
+            <label className="flex items-center justify-between cursor-pointer hover:text-slate-100">
+              <span>Site Boundary</span>
+              <input
+                type="checkbox"
+                checked={showBoundary}
+                onChange={(e) => setShowBoundary(e.target.checked)}
+                className="accent-cyan-500 rounded"
+              />
+            </label>
+            <label className="flex items-center justify-between cursor-pointer hover:text-slate-100">
+              <span>Transportation</span>
+              <input
+                type="checkbox"
+                checked={showRoads}
+                onChange={(e) => setShowRoads(e.target.checked)}
+                className="accent-cyan-500 rounded"
+              />
+            </label>
+            <label className="flex items-center justify-between cursor-pointer hover:text-slate-100">
+              <span>Landscaping</span>
+              <input
+                type="checkbox"
+                checked={showLandscape}
+                onChange={(e) => setShowLandscape(e.target.checked)}
+                className="accent-cyan-500 rounded"
+              />
+            </label>
+            <label className="flex items-center justify-between cursor-pointer hover:text-slate-100">
+              <span>Buildings</span>
+              <input
+                type="checkbox"
+                checked={showBuildings}
+                onChange={(e) => setShowBuildings(e.target.checked)}
+                className="accent-cyan-500 rounded"
+              />
+            </label>
+            <label className="flex items-center justify-between cursor-pointer hover:text-slate-100">
+              <span>Terrain Heatmap</span>
+              <input
+                type="checkbox"
+                checked={showHeatmapGround}
+                onChange={(e) => setShowHeatmapGround(e.target.checked)}
+                className="accent-cyan-500 rounded"
+              />
+            </label>
+          </div>
         </div>
       </div>
 

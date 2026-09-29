@@ -102,8 +102,8 @@ export const ProjectFolderModal: React.FC<ProjectFolderModalProps> = ({ onClose 
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-4xl w-full p-6 shadow-2xl space-y-6">
+    <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      <div className="bg-slate-900 border border-slate-700 rounded-xl sm:rounded-2xl max-w-4xl w-full p-4 sm:p-6 shadow-2xl space-y-4 sm:space-y-6 my-auto max-h-[92vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-start justify-between pb-4 border-b border-slate-800">
           <div>
@@ -112,7 +112,7 @@ export const ProjectFolderModal: React.FC<ProjectFolderModalProps> = ({ onClose 
               <span aria-hidden="true">·</span>
               <span>Total Workspace: 1.42 GB</span>
             </div>
-            <h2 className="text-xl font-bold text-white">
+            <h2 className="text-lg sm:text-xl font-bold text-white">
               Project Folder Organization (SIH26114_SmartCity)
             </h2>
             <p className="text-xs text-slate-400 mt-1">
@@ -128,14 +128,14 @@ export const ProjectFolderModal: React.FC<ProjectFolderModalProps> = ({ onClose 
         </div>
 
         {/* 2-Pane Explorer */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 h-96">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 sm:gap-6 min-h-[300px] md:h-96">
           {/* Left: Folder Hierarchy Tree */}
-          <div className="md:col-span-6 bg-slate-950/70 border border-slate-800 rounded-xl p-3 overflow-y-auto">
+          <div className="md:col-span-6 bg-slate-950/70 border border-slate-800 rounded-xl p-3 max-h-60 md:max-h-none overflow-y-auto">
             {renderTree(PROJECT_FOLDER_TREE)}
           </div>
 
           {/* Right: Selected File Metadata Inspector */}
-          <div className="md:col-span-6 bg-slate-950/70 border border-slate-800 rounded-xl p-5 flex flex-col justify-between overflow-y-auto">
+          <div className="md:col-span-6 bg-slate-950/70 border border-slate-800 rounded-xl p-4 sm:p-5 flex flex-col justify-between overflow-y-auto">
             <div className="space-y-4">
               <div className="flex items-start gap-3">
                 <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 shrink-0">

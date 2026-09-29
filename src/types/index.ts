@@ -5,7 +5,20 @@
 
 export type SourceType = 'FORMA' | 'REVIT' | 'TEAM_INPUT' | 'DESIGN_ASSUMPTION' | 'DEMO';
 
-export type VerificationStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'EVIDENCE_UPLOADED' | 'VERIFIED';
+/**
+ * 5-Stage Strict Evidence Verification Status
+ * MISSING: No evidence exists
+ * UPLOADED: File/reference has been added
+ * PENDING_REVIEW: Evidence exists but has not been manually verified
+ * VERIFIED: Explicitly verified by a designated reviewer with verification notes
+ * REJECTED: Evidence was reviewed and rejected
+ */
+export type VerificationStatus =
+  | 'MISSING'
+  | 'UPLOADED'
+  | 'PENDING_REVIEW'
+  | 'VERIFIED'
+  | 'REJECTED';
 
 export type ProposalId = 'proposalA' | 'proposalB';
 
@@ -19,23 +32,45 @@ export type AnalysisMetricId =
   | 'noise_analysis'
   | 'solar_energy';
 
+/**
+ * Standard Evidence Types for SIH26114 Competition Deliverables
+ */
+export type EvidenceType =
+  | 'Forma Screenshot'
+  | 'Forma Analysis'
+  | 'Forma Board'
+  | 'Revit Model'
+  | 'Revit Screenshot'
+  | 'Render'
+  | 'Walkthrough Video'
+  | 'Site Data'
+  | 'Calculation'
+  | 'Document'
+  | 'Other';
+
 export interface EvidenceItem {
-  id: string; // e.g. FORM-A-WIND-001
+  id: string; // e.g. EVID-REQ01-001
   requirementId: string;
   category: 'FORMA' | 'ANALYSIS' | 'REVIT' | 'RENDER' | 'VIDEO' | 'PRESENTATION' | 'SITE' | 'PROPOSAL';
   title: string;
   description: string;
-  source: string; // e.g., "Autodesk Forma 2026.1", "Autodesk Revit 2026"
+  source: string; // e.g. "Autodesk Forma 2026.1", "Autodesk Revit 2026"
   sourceType: SourceType;
-  fileType?: string; // e.g. "PNG Image", "RVT Project", "PDF Report", "IFC Model", "MP4 Video", "PPTX Deck", "CSV Dataset"
+  evidenceType?: EvidenceType;
+  fileType?: string; // e.g. "PNG Image", "RVT Project", "PDF Report", "MP4 Video"
   autodeskTool?: 'Forma' | 'Revit' | 'Both' | 'Other';
   proposal?: ProposalId | 'both' | 'site';
   fileName: string;
-  fileDataUrl?: string; // Base64 image/document preview
+  fileDataUrl?: string; // Base64 preview if available
   fileSize?: string;
   uploadedAt: string;
   uploadedBy: string;
   status: VerificationStatus;
+  reviewer?: string;
+  verifiedAt?: string;
+  verificationNote?: string;
+  rejectedAt?: string;
+  rejectionReason?: string;
   notes?: string;
 }
 
@@ -46,6 +81,7 @@ export interface AnalysisResult {
   unit: string;
   description: string;
   formaEngine: string;
+  methodologyStatus?: 'Planned Analysis Method' | 'Actual Forma Result' | 'Illustrative Demo';
   proposalAValue: number | string | null;
   proposalBValue: number | string | null;
   displayA: string;
@@ -190,15 +226,29 @@ export interface ProposalData {
   status: VerificationStatus;
 }
 
+/**
+ * 6-Step Honest Revit Workflow Specification
+ */
 export interface RevitWorkflowStep {
   stepNumber: number;
   title: string;
   softwareTool: string;
   description: string;
+  expectedEvidence?: string;
   status: VerificationStatus;
   evidenceIds: string[];
   notes?: string;
   lastUpdated?: string;
+}
+
+export interface FormaBoardTracking {
+  boardCreated: boolean;
+  proposalAAdded: boolean;
+  proposalBAdded: boolean;
+  comparisonVisible: boolean;
+  evidenceId?: string;
+  status: VerificationStatus;
+  notes?: string;
 }
 
 export interface DeliverableItem {
@@ -206,6 +256,7 @@ export interface DeliverableItem {
   title: string;
   category: 'FORMA_SITE' | 'PROPOSAL_A' | 'PROPOSAL_B' | 'FORMA_BOARD' | 'ANALYSIS_EVIDENCE' | 'REVIT_MODEL' | 'RENDERS' | 'WALKTHROUGH' | 'PRESENTATION_PPT';
   requiredFormat: string;
+  expectedEvidence?: string;
   status: VerificationStatus;
   owner: string;
   evidenceIds: string[];
@@ -219,15 +270,28 @@ export interface RequirementItem {
   title: string;
   description: string;
   mandatory: boolean;
+  expectedEvidence?: string;
   status: VerificationStatus;
   linkedEvidenceIds: string[];
   verificationCriteria: string;
+  notes?: string;
 }
 
 export interface AuditLogEntry {
   id: string;
   timestamp: string;
-  action: 'DATA_ADDED' | 'DATA_MODIFIED' | 'EVIDENCE_UPLOADED' | 'STATUS_CHANGED' | 'MODE_SWITCHED' | 'DATA_IMPORTED' | 'DATA_RESET';
+  action:
+    | 'DATA_ADDED'
+    | 'DATA_MODIFIED'
+    | 'EVIDENCE_UPLOADED'
+    | 'EVIDENCE_REVIEWED'
+    | 'EVIDENCE_VERIFIED'
+    | 'EVIDENCE_REJECTED'
+    | 'EVIDENCE_DELETED'
+    | 'STATUS_CHANGED'
+    | 'MODE_SWITCHED'
+    | 'DATA_IMPORTED'
+    | 'DATA_RESET';
   entity: string;
   previousValue?: string;
   newValue?: string;
@@ -261,6 +325,7 @@ export interface ProjectData {
   };
   analyses: AnalysisResult[];
   revitWorkflow: RevitWorkflowStep[];
+  formaBoardTracking: FormaBoardTracking;
   deliverables: DeliverableItem[];
   requirements: RequirementItem[];
   evidenceList: EvidenceItem[];
@@ -284,5 +349,7 @@ export type NavigationPage =
   | 'deliverables'
   | 'presentation'
   | 'readiness'
+  | 'requirements'
+  | 'project_audit'
   | 'audit_log'
   | 'import_export';

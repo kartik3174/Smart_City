@@ -25,6 +25,7 @@ interface SubmissionReadinessProps {
   onNavigateToEvidence: () => void;
   onNavigateToAnalyses: () => void;
   onNavigateToRevit: () => void;
+  onNavigateToSite?: () => void;
   isDemoMode: boolean;
 }
 
@@ -33,6 +34,7 @@ export const SubmissionReadiness: React.FC<SubmissionReadinessProps> = ({
   onNavigateToEvidence,
   onNavigateToAnalyses,
   onNavigateToRevit,
+  onNavigateToSite,
   isDemoMode,
 }) => {
   const auditResult = auditSubmissionBlockers(projectData);
@@ -127,21 +129,29 @@ export const SubmissionReadiness: React.FC<SubmissionReadinessProps> = ({
         </div>
 
         {/* Readiness Badge */}
-        <div className="shrink-0">
+        <div className="shrink-0 w-full sm:w-auto">
           {auditResult.isReadyForSubmission ? (
-            <div className="bg-emerald-950/40 border border-emerald-500/50 px-4 py-2 rounded-xl flex items-center gap-2 text-emerald-400 font-bold text-xs shadow-lg">
-              <Award className="w-5 h-5 text-emerald-400" />
+            <div className="bg-emerald-950/40 border border-emerald-500/50 px-4 py-2.5 rounded-xl flex items-center gap-2.5 text-emerald-400 font-bold text-xs shadow-lg">
+              <Award className="w-5 h-5 text-emerald-400 shrink-0" />
               <div>
-                <div>100% READY FOR SUBMISSION</div>
-                <div className="text-[10px] text-emerald-500 font-mono">All 24 criteria verified with evidence</div>
+                <div className="tracking-wide">STATUS: READY FOR SUBMISSION</div>
+                <div className="text-[10px] text-emerald-500 font-mono font-normal">All criteria verified with evidence</div>
+              </div>
+            </div>
+          ) : auditResult.hasSiteAreaViolation ? (
+            <div className="bg-red-950/60 border-2 border-red-500 px-4 py-2.5 rounded-xl flex items-center gap-2.5 text-red-300 font-bold text-xs shadow-lg ring-1 ring-red-500/40">
+              <AlertTriangle className="w-5 h-5 text-red-400 shrink-0" />
+              <div>
+                <div className="text-red-400 font-black tracking-wide">STATUS: NOT READY</div>
+                <div className="text-[10px] text-red-300 font-mono font-normal">Site Area Constraint Violation (&lt; 1 km²)</div>
               </div>
             </div>
           ) : (
-            <div className="bg-red-950/40 border border-red-500/50 px-4 py-2 rounded-xl flex items-center gap-2 text-red-400 font-bold text-xs shadow-lg">
-              <AlertTriangle className="w-5 h-5 text-red-400" />
+            <div className="bg-red-950/40 border border-red-500/50 px-4 py-2.5 rounded-xl flex items-center gap-2.5 text-red-400 font-bold text-xs shadow-lg">
+              <AlertTriangle className="w-5 h-5 text-red-400 shrink-0" />
               <div>
-                <div>SUBMISSION BLOCKED</div>
-                <div className="text-[10px] text-red-400/80 font-mono">
+                <div className="tracking-wide">STATUS: NOT READY</div>
+                <div className="text-[10px] text-red-400/80 font-mono font-normal">
                   {auditResult.blockers.length} Active Blocker{auditResult.blockers.length > 1 ? 's' : ''}
                 </div>
               </div>
@@ -149,6 +159,40 @@ export const SubmissionReadiness: React.FC<SubmissionReadinessProps> = ({
           )}
         </div>
       </div>
+
+      {/* Specific Site Area Constraint Violation Alert Banner */}
+      {auditResult.hasSiteAreaViolation && (
+        <div className="p-4 sm:p-5 bg-red-950/50 border-2 border-red-500 rounded-xl sm:rounded-2xl text-red-200 text-xs sm:text-sm space-y-3 shadow-2xl">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 text-red-400 font-bold text-sm sm:text-base">
+              <AlertTriangle className="w-5 h-5 sm:w-6 sm:h-6 shrink-0 text-red-400 animate-pulse" />
+              <span>SITE AREA CONSTRAINT VIOLATION · PROJECT NOT READY</span>
+            </div>
+            <span className="font-mono text-xs px-2.5 py-1 rounded bg-red-900/60 text-red-200 border border-red-500/50 self-start sm:self-auto font-semibold">
+              Mandatory Minimum: 1.00 km² (1,000,000 m²)
+            </span>
+          </div>
+
+          <p className="text-slate-200 text-xs sm:text-sm leading-relaxed">
+            {auditResult.siteAreaViolationMessage || `The defined site area (${auditResult.currentSiteAreaKm2} km² / ${auditResult.currentSiteAreaM2.toLocaleString()} m²) strictly fails the official Autodesk SIH26114 competition requirement of at least 1.00 km² (1,000,000 m²). The project submission status is marked as NOT READY.`}
+          </p>
+
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-2.5 border-t border-red-500/30 text-xs">
+            <div className="font-mono text-red-300">
+              Current Area: <span className="font-bold text-white">{auditResult.currentSiteAreaKm2} km²</span> · Deficit: <span className="font-bold text-red-400">{(auditResult.minRequiredAreaKm2 - auditResult.currentSiteAreaKm2).toFixed(3)} km² ({((auditResult.minRequiredAreaKm2 - auditResult.currentSiteAreaKm2) * 1000000).toLocaleString()} m²)</span>
+            </div>
+            {onNavigateToSite && (
+              <button
+                onClick={onNavigateToSite}
+                className="px-3.5 py-2 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-lg transition-colors flex items-center gap-1.5 shadow-md min-h-[44px]"
+              >
+                <span>Adjust Site Boundary on Site View</span>
+                <ExternalLink className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Demo Warning Banner if in Demo mode */}
       {isDemoMode && (
@@ -183,7 +227,7 @@ export const SubmissionReadiness: React.FC<SubmissionReadinessProps> = ({
         <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
           <span className="text-xs text-slate-400 font-medium block">In Progress / Review</span>
           <div className="text-2xl font-bold font-mono text-amber-400 mt-1 tabular-nums">
-            {metrics.inProgress + metrics.evidenceUploaded}
+            {metrics.pendingReview + metrics.uploaded}
           </div>
           <span className="text-[11px] text-slate-500 mt-1 block">Awaiting sign-off</span>
         </div>
@@ -191,7 +235,7 @@ export const SubmissionReadiness: React.FC<SubmissionReadinessProps> = ({
         <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
           <span className="text-xs text-slate-400 font-medium block">Unstarted / Missing</span>
           <div className="text-2xl font-bold font-mono text-red-400 mt-1 tabular-nums">
-            {metrics.notStarted}
+            {metrics.missing}
           </div>
           <span className="text-[11px] text-slate-500 mt-1 block">Blocking submission</span>
         </div>

@@ -313,6 +313,15 @@ export const DEMO_PROJECT_DATA: ProjectData = {
       lastUpdated: '2026-09-28',
     },
   ],
+  formaBoardTracking: {
+    boardCreated: true,
+    proposalAAdded: true,
+    proposalBAdded: true,
+    comparisonVisible: true,
+    evidenceId: 'DEMO-EVID-BOARD-01',
+    status: 'VERIFIED',
+    notes: 'Forma Board created comparing Proposal A and Proposal B across all 8 environmental metrics.',
+  },
   deliverables: [
     { id: 'del-1', title: 'Autodesk Forma Site Model (≥ 1 km²)', category: 'FORMA_SITE', requiredFormat: 'Forma Project URL / Cadastral Boundary Coordinates', status: 'VERIFIED', owner: 'Urban Planning Lead', evidenceIds: ['DEMO-EVID-SITE-01'], lastUpdated: '2026-09-28', notes: '1.00 km² boundary verified in Forma.' },
     { id: 'del-2', title: 'Proposal A — Conventional Urban Development', category: 'PROPOSAL_A', requiredFormat: 'Forma Proposal File / 3D Massing Schedule', status: 'VERIFIED', owner: 'Architectural Designer', evidenceIds: ['DEMO-EVID-PROPA-01'], lastUpdated: '2026-09-28', notes: 'Gridiron massing documented.' },
